@@ -19,6 +19,8 @@ package raft
 
 import (
 	"fmt"
+	"unicode"
+
 	//	"bytes"
 	"sync"
 	"sync/atomic"
@@ -57,16 +59,37 @@ type ApplyMsg struct {
 //
 type Raft struct {
 	mu        sync.Mutex          // Lock to protect shared access to this peer's state
+	//集群中的其他节点
 	peers     []*labrpc.ClientEnd // RPC end points of all peers
 	persister *Persister          // Object to hold this peer's persisted state
 	me        int                 // this peer's index into peers[]
 	dead      int32               // set by Kill()
 
+	cluster int     //集群中节点的数量
+	statue mstatue  //raft的状态
+	leaderid int  //leader的id
+	term int //我的任期号
+
+	//以下的元素，每次新任期开始都要清空
+	tstatue	termstatue
+
 	// Your data here (2A, 2B, 2C).
 	// Look at the paper's Figure 2 for a description of what
 	// state a Raft server must maintain.
+}
+type termstatue struct {
+	votenum int  //我的票数
+	isvote bool  //true=以及投票了
+	time.Time   //循环时间
 
 }
+//raft的状态
+type  mstatue int
+const (
+	candidate mstatue = iota
+	follower
+	leader
+)
 //打印
 /*
 // example
@@ -90,6 +113,11 @@ func (rf *Raft) GetState() (int, bool) {
 	var term int
 	var isleader bool
 	// Your code here (2A).
+	term=rf.term
+	isleader=false
+	if rf.statue==leader{
+		isleader=true
+	}
 	return term, isleader
 }
 
@@ -160,6 +188,10 @@ func (rf *Raft) Snapshot(index int, snapshot []byte) {
 //
 type RequestVoteArgs struct {
 	// Your data here (2A, 2B).
+	term int //自己的任期号
+	candidate int //自己的id
+	lastlogindex int//自己最后的日志号
+	lastlogterm int//自己最后的日志的任期
 }
 
 //
@@ -168,13 +200,62 @@ type RequestVoteArgs struct {
 //
 type RequestVoteReply struct {
 	// Your data here (2A).
+	term int //自己的任期号
+	vote bool //是否投票：true=同意
 }
-
+//更新任期
+func Updateterm(rf *Raft)  {
+	rf.tstatue.isvote=false
+	rf.tstatue.votenum=0
+	//更新时间
+	//rf.tstatue.Time
+}
 //
 // example RequestVote RPC handler.
 //
 func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	// Your code here (2A, 2B).
+	switch rf.statue {
+		//leader是不应该收到请求的！！有也只有可能是因为网络延迟而导致的
+		case leader:
+
+		case candidate:
+			//如果candidate收到了比他任期号还大的请求，降级为follower
+			if(args.term>rf.term){
+				rf.statue=follower
+				Updateterm(rf)
+				reply.term=rf.term
+				if(rf.tstatue.isvote){
+					reply.vote=false
+				}else{
+					reply.vote=true
+				}
+			}
+		case follower:
+			//如果任期号相等,
+			if(args.term==rf.term){
+				if(rf.tstatue.isvote){
+					reply.vote=false
+				}else{
+					reply.vote=true
+				}
+				if(rf.tstatue.isvote){
+					reply.vote=false
+				}else{
+					reply.vote=true
+				}
+			}else if(args.term>rf.term){
+				reply.term=rf.term
+				Updateterm(rf)
+				rf.term=args.term
+				if(rf.tstatue.isvote){
+					reply.vote=false
+				}else{
+					reply.vote=true
+				}
+			}
+
+	}
 }
 
 //
@@ -208,6 +289,17 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 //
 func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *RequestVoteReply) bool {
 	ok := rf.peers[server].Call("Raft.RequestVote", args, reply)
+	switch rf.statue {
+		case candidate:
+			rf.tstatue.votenum+=1
+			if(rf.tstatue.votenum>=(rf.cluster/2+1)){
+				rf.statue=leader
+				Updateterm(rf)
+				//向所有节点发送keep-alive
+
+			}
+
+	}
 	return ok
 }
 
