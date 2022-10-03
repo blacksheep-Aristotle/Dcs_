@@ -18,9 +18,11 @@ package raft
 //
 
 import (
+	"fmt"
 	//	"bytes"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	//	"6.824/labgob"
 	"6.824/labrpc"
@@ -65,11 +67,26 @@ type Raft struct {
 	// state a Raft server must maintain.
 
 }
+//打印
+/*
+// example
+216: [peer 2 (follower) at Term 0] election timeout
+218: [peer 2 (candidate) at Term 1] start a new election
+219: [peer 2 (candidate) at Term 1] request vote from peer 0
+219: [peer 2 (candidate) at Term 1] request vote from peer 1
+222: [peer 0 (follower) at Term 1] vote for peer 2
+*/
+func MyPrint(rf *Raft, format string, a ...interface{}) {
+	if RaftPrint {
+		format = "%v: [peer %v (%v) at Term %v] " + format + "\n"
+		a = append([]interface{}{time.Now().Sub(rf.allBegin).Milliseconds(), rf.me, rf.state, rf.currentTerm}, a...)
+		fmt.Printf(format, a...)
+	}
+}
 
 // return currentTerm and whether this server
 // believes it is the leader.
 func (rf *Raft) GetState() (int, bool) {
-
 	var term int
 	var isleader bool
 	// Your code here (2A).
