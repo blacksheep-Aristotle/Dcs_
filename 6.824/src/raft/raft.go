@@ -69,7 +69,8 @@ type Raft struct {
 	statue mstatue  //raft的状态
 	leaderid int  //leader的id
 	term int //我的任期号
-
+	heartBeat     time.Duration
+	electionTime  time.Time
 	//以下的元素，每次新任期开始都要清空
 	tstatue	termstatue
 
@@ -80,7 +81,6 @@ type Raft struct {
 type termstatue struct {
 	votenum int  //我的票数
 	isvote bool  //true=以及投票了
-	time.Time   //循环时间
 
 }
 //raft的状态
@@ -99,10 +99,15 @@ const (
 219: [peer 2 (candidate) at Term 1] request vote from peer 1
 222: [peer 0 (follower) at Term 1] vote for peer 2
 */
+type  RaftPrint bool
+const (
+	log RaftPrint=true
+
+)
 func MyPrint(rf *Raft, format string, a ...interface{}) {
 	if RaftPrint {
 		format = "%v: [peer %v (%v) at Term %v] " + format + "\n"
-		a = append([]interface{}{time.Now().Sub(rf.allBegin).Milliseconds(), rf.me, rf.state, rf.currentTerm}, a...)
+		a = append([]interface{}{time.Now().Sub(rf.allBegin).Milliseconds(), rf.me, rf.statue, rf.term}, a...)
 		fmt.Printf(format, a...)
 	}
 }
@@ -210,49 +215,53 @@ func Updateterm(rf *Raft)  {
 	//更新时间
 	//rf.tstatue.Time
 }
+func Vote(rf*Raft,reply*RequestVoteReply)  {
+	if(rf.tstatue.isvote){
+		reply.vote=false
+	}else{
+		reply.vote=true
+		rf.tstatue.isvote=true
+	}
+}
 //
 // example RequestVote RPC handler.
 //
 func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	// Your code here (2A, 2B).
-	switch rf.statue {
-		//leader是不应该收到请求的！！有也只有可能是因为网络延迟而导致的
-		case leader:
+	//reply的任期是没有改变的任期吗？version1：是的
+	reply.term=rf.term
 
+	switch rf.statue {
+
+		case leader:
+			//收到大于自己任期号，说明leader落后了,投票然后转为follower
+			if args.term>rf.term{
+				rf.statue=follower
+				Updateterm(rf)
+				//reply.term=rf.term
+				rf.term=args.term
+				reply.vote=true
+				rf.tstatue.isvote=true
+
+			}
 		case candidate:
 			//如果candidate收到了比他任期号还大的请求，降级为follower
 			if(args.term>rf.term){
 				rf.statue=follower
 				Updateterm(rf)
-				reply.term=rf.term
-				if(rf.tstatue.isvote){
-					reply.vote=false
-				}else{
-					reply.vote=true
-				}
+				//reply.term=rf.term
+				rf.term=args.term
+				Vote(rf,reply)
 			}
 		case follower:
 			//如果任期号相等,
 			if(args.term==rf.term){
-				if(rf.tstatue.isvote){
-					reply.vote=false
-				}else{
-					reply.vote=true
-				}
-				if(rf.tstatue.isvote){
-					reply.vote=false
-				}else{
-					reply.vote=true
-				}
+				Vote(rf,reply)
 			}else if(args.term>rf.term){
-				reply.term=rf.term
+				//reply.term=rf.term
 				Updateterm(rf)
 				rf.term=args.term
-				if(rf.tstatue.isvote){
-					reply.vote=false
-				}else{
-					reply.vote=true
-				}
+				Vote(rf,reply)
 			}
 
 	}
@@ -287,10 +296,18 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 // that the caller passes the address of the reply struct with &, not
 // the struct itself.
 //
+
 func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *RequestVoteReply) bool {
 	ok := rf.peers[server].Call("Raft.RequestVote", args, reply)
 	switch rf.statue {
 		case candidate:
+			//如果reply的任期比我还高，那么candidate转为follower，停止投票
+			if reply.term>rf.term{
+				rf.statue=follower
+				//重社超时时间
+				rf.RandomElection()
+				return ok
+			}
 			rf.tstatue.votenum+=1
 			if(rf.tstatue.votenum>=(rf.cluster/2+1)){
 				rf.statue=leader
@@ -300,6 +317,11 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 			}
 
 	}
+	return ok
+}
+func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *AppendEntriesReply) bool {
+	ok := rf.peers[server].Call("Raft.AppendEntry", args, reply)
+
 	return ok
 }
 
@@ -318,6 +340,8 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 // term. the third return value is true if this server believes it is
 // the leader.
 //
+//Start（命令）要求Raft启动处理，将命令附加到复制的日志。Start（）应立即返回，而不必等待日志附加完成。
+//该服务希望您的实现为每个新提交的日志条目向applyCh通道参数Make（）发送ApplyMsg。
 func (rf *Raft) Start(command interface{}) (int, int, bool) {
 	index := -1
 	term := -1
@@ -349,16 +373,89 @@ func (rf *Raft) killed() bool {
 	z := atomic.LoadInt32(&rf.dead)
 	return z == 1
 }
+//你只应该在以下情况下重置你的选举计时器：a）你从当前的领导者那里得到一个AppendEntries RPC
+//（即，如果AppendEntries参数中的任期已经过时，你不应该重启你的计时器）；b）你正在开始一个选举；或者c）你授予另一个对等体一个投票。
+func (rf*Raft)RandomElection()  {
 
+}
+//开始选举，如果每当选，说明都没发送，等待下次ticker
+func(rf*Raft)  Leaderelection() {
+	rf.term+=1
+	rf.statue=candidate
+	var  args=RequestVoteArgs{rf.term,rf.me,0,0}
+	var  reply = RequestVoteReply{}
+	for i := range rf.peers {
+		if i != rf.me {
+			//应该要并发处理，否则，发完一个就卡住了！！！
+			go rf.sendRequestVote(i, &args, &reply)
+		}
+	}
+}
+//一条日志
+type Entry struct {
+	Command	interface{}
+	Term	int
+	Index	int
+	IsEmpty	bool
+}
+type AppendEntriesArgs struct {
+	// Your data here (2A, 2B).
+	// 领导人的任期号
+	Term			int
+	// 领导的Id
+	LeaderId		int
+	// 最后日志条目的索引值
+	PrevLogIndex	int
+	// 最后日志条目的任期号
+	PrevLogTerm		int
+	// 准备存储的日志条目
+	Entries 		[]Entry
+	// 领导人已经提交的日志的索引值
+	LeaderCommit	int
+}
+
+//
+// example RequestVote RPC reply structure.
+// field names must start with capital letters!
+//
+type AppendEntriesReply struct {
+
+	// Your data here (2A).
+	// 当前任期号，以便于领导人去更新自己的任期号
+	Term 		int
+	// Follower匹配了PrevLogIndex和PrevLogTerm时为真
+	Success		bool
+
+}
+//leader维持心跳
+func (rf* Raft) Keepalive()  {
+
+}
+//ticker会以心跳为周期不断检查状态。如果当前是Leader就会发送心跳包，而心跳包是靠appendEntries()发送空log
 // The ticker go routine starts a new election if this peer hasn't received
 // heartsbeats recently.
 func (rf *Raft) ticker() {
+
 	for rf.killed() == false {
+		//defer rf.mu.Unlock()
+		time.Sleep(rf.heartBeat)
+		rf.mu.Lock()
+		if rf.statue == leader {
+			//发送心跳包
+			rf.Keepalive()
+		}
+		//如果超时，开始选举
+		if time.Now().After(rf.electionTime) {
+			MyPrint(rf,"start a new election")
+			//设置随机选举超时时间
+			rf.RandomElection()
+			rf.Leaderelection()
+		}
 
 		// Your code here to check if a leader election should
 		// be started and to randomize sleeping time using
 		// time.Sleep().
-
+		rf.mu.Unlock()
 	}
 }
 
@@ -379,6 +476,14 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	rf.peers = peers
 	rf.persister = persister
 	rf.me = me
+
+	rf.statue=follower
+	//50ms为一心跳
+	rf.heartBeat=100 * time.Millisecond
+	//设置超时时间，超时时间》心跳
+	rf.RandomElection()
+
+	Updateterm(rf)
 
 	// Your initialization code here (2A, 2B, 2C).
 
