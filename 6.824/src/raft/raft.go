@@ -205,7 +205,8 @@ type RequestVoteReply struct {
 	vote bool //是否投票：true=同意
 }
 //更新任期
-func(rf *Raft) Updateterm()  {
+func(rf *Raft) Updateterm(t int)  {
+	rf.term=t
 	rf.tstatue.isvote=false
 	rf.tstatue.votenum=0
 	//更新时间
@@ -236,8 +237,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 		//收到大于自己任期号，说明leader落后了,投票然后转为follower
 		if args.term>rf.term{
 			rf.statue=follower
-			rf.Updateterm()
-			rf.term=args.term
+			rf.Updateterm(args.term)
 			reply.term=rf.term
 
 			Vote(rf,reply)
@@ -248,21 +248,17 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 		//如果candidate收到了比他任期号还大的请求，降级为follower
 		if(args.term>rf.term){
 			rf.statue=follower
-			rf.Updateterm()
-			rf.term=args.term
+			rf.Updateterm(args.term)
 			reply.term=rf.term
 			Vote(rf,reply)
 		}else {
 			reply.vote=false
 		}
 	case follower:
-		//如果任期号相等,
-		if(args.term==rf.term){
-			Vote(rf,reply)
-		}else if(args.term>rf.term){  //说明进入下一次任期了
+		//如果任期号相等,是不投票的！
+		if(args.term>rf.term){  //说明进入下一次任期了
 			//reply.term=rf.term
-			rf.Updateterm()
-			rf.term=args.term
+			rf.Updateterm(args.term)
 			reply.term=rf.term
 			Vote(rf,reply)
 		}else {
@@ -275,15 +271,15 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 func (rf *Raft) RequestApp(args *AppendEntriesArgs, reply *AppendEntriesReply)  {
 
 	rf.Log("receive a keep-alive from leader %v which term %v",args.leaderId,args.term)
+	if args.term>rf.term{
+		rf.Updateterm(args.term)
+	}
 	if args.term>=rf.term{
-
-		rf.term=args.term
-		rf.Updateterm()
 		rf.statue=follower
 		//收到心跳包
 		rf.timer.Reset(rf.timeout)
 
-		reply.success=false
+		reply.success=true
 		reply.term=rf.term
 	}else{
 		//如果收到term比我低的心跳包，要重置时间吗？应该不用吧。。。
@@ -296,6 +292,14 @@ func (rf *Raft) RequestApp(args *AppendEntriesArgs, reply *AppendEntriesReply)  
 func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *RequestVoteReply) bool {
 	rf.Log("Send a quest vote to %v",server)
 	ok := rf.peers[server].Call("Raft.RequestVote", args, reply)
+	for !ok{
+		if rf.killed()==true{
+			return false
+		}
+		ok = rf.peers[server].Call("Raft.RequestVote", args, reply)
+	}
+	rf.mu.Lock()
+	defer rf.mu.Unlock()
 	switch rf.statue {
 	//对于leader而言，如果reply的term》leader，说明leader已经过期了
 	case leader:
@@ -315,7 +319,7 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 		if rf.tstatue.votenum>=(rf.cluster/2+1){
 			rf.Log("Become leader!!!!")
 			rf.statue=leader
-			rf.Updateterm()
+			rf.Updateterm(rf.term+1)
 			rf.timer.Reset(rf.heartBeat)
 			rf.Keepalive()
 			//向所有节点发送keep-alive
@@ -326,14 +330,20 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 }
 func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *AppendEntriesReply) bool {
 	ok := rf.peers[server].Call("Raft.RequestApp", args, reply)
-
+	for !ok{
+		if rf.killed() {
+			return false
+		}
+		ok=rf.peers[server].Call("Raft.RequestApp", args, reply)
+	}
 	//对于leader而言，如果reply的term》leader，说明leader已经过期了
+
 	if reply.term>rf.term{
 		rf.statue=follower
 		return ok
 	}
 
-	return ok
+	return reply.success
 }
 
 
@@ -355,6 +365,8 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 func (rf *Raft) Kill() {
 	atomic.StoreInt32(&rf.dead, 1)
 	// Your code here, if desired.
+	rf.Log("I AM DEAD")
+	rf.timer.Stop()
 }
 
 func (rf *Raft) killed() bool {
@@ -414,6 +426,7 @@ type AppendEntriesReply struct {
 //leader维持心跳
 func (rf* Raft) Keepalive()  {
 	args:=AppendEntriesArgs{term: rf.term,leaderId:rf.me}
+
 	for i:=0;i< len(rf.peers);i++{
 		if i!=rf.me{
 			reply:=AppendEntriesReply{}
@@ -448,8 +461,7 @@ func (rf *Raft) ticker() {
 				rf.statue=candidate
 				t:= time.Duration(150*rand.Intn(50))* time.Millisecond
 				rf.timer.Reset(t)
-				rf.Updateterm()
-				rf.term+=1
+				rf.Updateterm(rf.term+1)
 				rf.tstatue.isvote=true
 				rf.tstatue.votenum+=1
 				rf.Leaderelection()
@@ -498,7 +510,7 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	rf.timer=time.NewTicker(rf.timeout)
 	//设置超时时间，超时时间》心跳
 
-	rf.Updateterm()
+	rf.Updateterm(0)
 
 	// Your initialization code here (2A, 2B, 2C).
 	//bug1：time.Time类型才能加减，time.Duration不行
