@@ -75,7 +75,6 @@ type Raft struct {
 	timeout		  time.Duration  //超时时间，超过就开始选举
 	//：a）你从当前的领导者那里得到一个AppendEntries RPC（即，如果AppendEntries参数中的任期已经过时，你不应该重启你的计时器）；
 	//b）你正在开始一个选举；或者c）你授予另一个对等体一个投票。
-	//timer*              time.Ticker  //定时器
 	timeBegin	  time.Time //start time used to debug
 	electiontime  time.Time
 	//以下的元素，每次新任期开始都要清空
@@ -84,31 +83,106 @@ type Raft struct {
 	// Your data here (2A, 2B, 2C).
 	// Look at the paper's Figure 2 for a description of what
 	// state a Raft server must maintain.
+	// 用来写入通道
+	applyCh   chan ApplyMsg
+	applyCond *sync.Cond
+
 }
 type termstatue struct {
-	votenum int  //我的票数
-	isvote bool  //true=以及投票了
+	Votenum int  //我的票数
+	Isvote bool  //true=以及投票了
 
 }
 //raft的状态
 type  mstatue int
 const (
-	candidate mstatue = iota
-	follower
+	follower mstatue = iota
+	candidate
 	leader
 )
-//打印
-/*
-// example
-216: [peer 2 (follower) at Term 0] election timeout
-218: [peer 2 (candidate) at Term 1] start a new election
-219: [peer 2 (candidate) at Term 1] request vote from peer 0
-219: [peer 2 (candidate) at Term 1] request vote from peer 1
-222: [peer 0 (follower) at Term 1] vote for peer 2
-*/
 
 
+// --------------------------------------------------------RPC参数部分----------------------------------------------------
+type RequestVoteArgs struct {
+	// Your data here (2A, 2B).
+	Term int //自己的任期号
+	Candidate int //自己的id
+	Lastlogindex int//自己最后的日志号
+	Lastlogterm int//自己最后的日志的任期
+}
 
+type RequestVoteReply struct {
+	// Your data here (2A).
+	Term int //自己的任期号
+	Vote bool //是否投票：true=同意
+}
+//一条日志
+type Entry struct {
+	Command	interface{}
+	Term	int
+	Index	int
+	Isempty	bool
+}
+type AppendEntriesArgs struct {
+	// Your data here (2A, 2B).
+	// 领导人的任期号
+	Term			int
+	// 领导的Id
+	Leaderid		int
+	// 最后日志条目的索引值
+	Previogindex	int
+	// 最后日志条目的任期号
+	Previogierm		int
+	// 准备存储的日志条目
+	Entries 		[]Entry
+	// 领导人已经提交的日志的索引值
+	Ladercommit	int
+}
+
+//
+// example RequestVote RPC reply structure.
+// field names must start with capital letters!
+//
+type AppendEntriesReply struct {
+
+	// Your data here (2A).
+	// 当前任期号，以便于领导人去更新自己的任期号
+	Term 		int
+	// Follower匹配了PrevLogIndex和PrevLogTerm时为真
+	Success		bool
+
+}
+func Make(peers []*labrpc.ClientEnd, me int,
+	persister *Persister, applyCh chan ApplyMsg) *Raft {
+	rf := &Raft{}
+	rf.peers = peers
+	rf.persister = persister
+	rf.me = me
+	//------------------------------------------------------about log
+	rf.applyCh = applyCh
+	rf.applyCond = sync.NewCond(&rf.mu)
+	//-------------------------------------------------------about term
+	rf.Updateterm(0)
+	rf.statue=follower
+	//-----------------------------------------------------------about time
+	//30ms为一心跳
+	rf.heartBeat=30 * time.Millisecond
+	//初始的超时时间应该是随机的，防止大部分节点同时到candidate
+	rf.timeout=time.Duration(150*rand.Intn(200))* time.Millisecond//150-350ms的超时时间
+	rf.electiontime=time.Now().Add(rf.timeout)
+	//bug1：time.Time类型才能加减，time.Duration不行
+	rf.timeBegin=time.Now()
+
+	//--------------------------------------------------------start work
+	rf.readPersist(persister.ReadRaftState())
+	rf.Log("Start")
+	// start ticker goroutine to start elections
+	go rf.ticker()
+	//开始工作，用来接受log
+	go rf.Worker()
+
+	return rf
+}
 // return currentTerm and whether this server
 // believes it is the leader.
 func (rf *Raft) GetState() (int, bool) {
@@ -123,6 +197,225 @@ func (rf *Raft) GetState() (int, bool) {
 	return term, isleader
 }
 
+//--------------------------------------------------------ticker() and worker()---------------------------------------------
+
+//ticker会以心跳为周期不断检查状态。如果当前是Leader就会发送心跳包，而心跳包是靠appendEntries()发送空log
+// The ticker go routine starts a new election if this peer hasn't received
+// heartsbeats recently.
+func (rf *Raft) ticker() {
+
+	for rf.killed() == false {
+		//defer rf.mu.Unlock()
+		//当超时时
+
+
+		//当超时时
+		time.Sleep(rf.heartBeat)
+		if rf.killed()==false{
+			return
+		}
+		rf.mu.Lock()
+		if rf.statue==leader{
+			rf.Log("start keep-alive")
+			rf.Keepalive()
+			//如果现在的时间超出选举时间，说明超时了，开始选举
+		}else if time.Now().After(rf.electiontime){
+			rf.Log("start election")
+			rf.statue=candidate
+			rf.Updateterm(rf.term+1)
+			rf.tstatue.Votenum+=1
+			rf.tstatue.Isvote=true
+			rf.Upelection()
+			rf.Leaderelection()
+		}
+		rf.mu.Unlock()
+
+
+	}
+}
+
+func (rf* Raft) Worker()  {
+
+}
+
+//--------------------------------------------------------选举有关---------------------------------------------
+//开始选举，如果每当选，说明都没发送，等待下次ticker
+func(rf*Raft)  Leaderelection() {
+	rf.statue=candidate
+	var  args=RequestVoteArgs{rf.term,rf.me,0,0}
+
+	for i := range rf.peers {
+		if i != rf.me {
+			var  reply = RequestVoteReply{}
+			//应该要并发处理，否则，发完一个就卡住了！！！
+			go rf.sendRequestVote(i, &args, &reply)
+		}
+	}
+}
+////：a）你从当前的领导者那里得到一个AppendEntries RPC（即，如果AppendEntries参数中的任期已经过时，你不应该重启你的计时器）；
+//	//b）你正在开始一个选举；或者c）你授予另一个对等体一个投票。
+func(rf*Raft) Upelection() {
+	t:=time.Duration(150*rand.Intn(200))* time.Millisecond
+	rf.electiontime=time.Now().Add(t)
+}
+//更新任期
+func(rf *Raft) Updateterm(t int)  {
+	rf.term=t
+	rf.tstatue.Isvote=false
+	rf.tstatue.Votenum=0
+	//更新时间
+	//rf.tstatue.Time
+}
+func Vote(rf*Raft,reply*RequestVoteReply)  {
+	if rf.tstatue.Isvote{
+		reply.Vote=false
+		//三种情况之一：投出票时重置
+	}else{
+		rf.Log("vote to ")
+		reply.Vote=true
+		rf.tstatue.Isvote=true
+		rf.Upelection()
+	}
+}
+//
+// example RequestVote RPC handler.
+//
+func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
+	// Your code here (2A, 2B).
+	rf.Log("recieve a vote which come from %v",args.Candidate)
+	//如果arg的term大于我的term，reply=args.term，如果arg的term小于我的term，不改直接发
+	reply.Term=rf.term
+	switch rf.statue {
+
+	case leader:
+		//收到大于自己任期号，说明leader落后了,投票然后转为follower
+		if args.Term>rf.term{
+			rf.statue=follower
+			rf.Updateterm(args.Term)
+			reply.Term=rf.term
+
+			Vote(rf,reply)
+		}else {
+			reply.Vote=false
+		}
+	case candidate:
+		//如果candidate收到了比他任期号还大的请求，降级为follower
+		if args.Term>rf.term{
+			rf.statue=follower
+			rf.Updateterm(args.Term)
+			reply.Term=rf.term
+			Vote(rf,reply)
+		}else {
+			reply.Vote=false
+		}
+	case follower:
+		//如果任期号相等,是不投票的！
+		if args.Term>rf.term{  //说明进入下一次任期了
+			//reply.term=rf.term
+			rf.Updateterm(args.Term)
+			reply.Term=rf.term
+			Vote(rf,reply)
+		}else {
+			reply.Vote=false
+		}
+
+	}
+}
+
+func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *RequestVoteReply) bool {
+	rf.Log("Send a quest vote to %v",server)
+	ok := rf.peers[server].Call("Raft.RequestVote", args, reply)
+	for !ok{
+		if rf.killed()==true{
+			return false
+		}
+		ok = rf.peers[server].Call("Raft.RequestVote", args, reply)
+	}
+	rf.mu.Lock()
+	defer rf.mu.Unlock()
+	switch rf.statue {
+	//对于leader而言，如果reply的term》leader，说明leader已经过期了
+	case leader:
+		if reply.Term>rf.term{
+			rf.Log("receive a higher request %v",reply.Term)
+			rf.statue=follower
+			return ok
+		}
+	case candidate:
+		//如果reply的任期比我还高，那么candidate转为follower，停止投票
+		if reply.Term>rf.term{
+			rf.statue=follower
+			//如果收到比我任期还大的，不用重设超时时间
+			return ok
+		}
+		rf.tstatue.Votenum+=1
+		if rf.tstatue.Votenum>=(rf.cluster/2+1){
+			rf.Log("Become leader!!!!")
+			rf.statue=leader
+			rf.Updateterm(rf.term+1)
+
+			rf.Keepalive()
+			//向所有节点发送keep-alive
+		}
+
+	}
+	return ok
+}
+
+//--------------------------------------------------------keep-alive---------------------------------------------
+
+//leader维持心跳
+func (rf* Raft) Keepalive()  {
+	args:=AppendEntriesArgs{Term: rf.term,Leaderid:rf.me}
+
+	for i:=0;i< len(rf.peers);i++{
+		if i!=rf.me{
+			reply:=AppendEntriesReply{}
+			go rf.sendAppendEntry(i,&args,&reply)
+		}
+	}
+}
+
+func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *AppendEntriesReply) bool {
+	ok := rf.peers[server].Call("Raft.RequestApp", args, reply)
+	for !ok{
+		if rf.killed() {
+			return false
+		}
+		ok=rf.peers[server].Call("Raft.RequestApp", args, reply)
+	}
+	//对于leader而言，如果reply的term》leader，说明leader已经过期了
+
+	if reply.Term>rf.term{
+		rf.statue=follower
+		return ok
+	}
+
+	return reply.Success
+}
+
+//对append的回应：注意：不要将心跳和日志append分开处理！！！！
+func (rf *Raft) RequestApp(args *AppendEntriesArgs, reply *AppendEntriesReply)  {
+
+	rf.Log("receive a keep-alive from leader %v which term %v",args.Leaderid,args.Term)
+	if args.Term>rf.term{
+		rf.Updateterm(args.Term)
+	}
+	if args.Term>=rf.term{
+		rf.statue=follower
+		//收到心跳包
+		rf.Upelection()
+
+		reply.Success=true
+		reply.Term=rf.term
+	}else{
+		//如果收到term比我低的心跳包，要重置时间吗？应该不用吧。。。
+		reply.Term=rf.term
+		reply.Success=false
+	}
+
+}
+//--------------------------------------------------------持久化部分---------------------------------------------
 //
 // save Raft's persistent state to stable storage,
 // where it can later be retrieved after a crash and restart.
@@ -184,176 +477,6 @@ func (rf *Raft) Snapshot(index int, snapshot []byte) {
 }
 
 
-//
-// example RequestVote RPC arguments structure.
-// field names must start with capital letters!
-//
-type RequestVoteArgs struct {
-	// Your data here (2A, 2B).
-	term int //自己的任期号
-	candidate int //自己的id
-	lastlogindex int//自己最后的日志号
-	lastlogterm int//自己最后的日志的任期
-}
-
-//
-// example RequestVote RPC reply structure.
-// field names must start with capital letters!
-//
-type RequestVoteReply struct {
-	// Your data here (2A).
-	term int //自己的任期号
-	vote bool //是否投票：true=同意
-}
-
-////：a）你从当前的领导者那里得到一个AppendEntries RPC（即，如果AppendEntries参数中的任期已经过时，你不应该重启你的计时器）；
-//	//b）你正在开始一个选举；或者c）你授予另一个对等体一个投票。
-func(rf*Raft) Upelection() {
-	t:=time.Duration(150*rand.Intn(200))* time.Millisecond
-	rf.electiontime=time.Now().Add(t)
-}
-//更新任期
-func(rf *Raft) Updateterm(t int)  {
-	rf.term=t
-	rf.tstatue.isvote=false
-	rf.tstatue.votenum=0
-	//更新时间
-	//rf.tstatue.Time
-}
-func Vote(rf*Raft,reply*RequestVoteReply)  {
-	if(rf.tstatue.isvote){
-		reply.vote=false
-		//三种情况之一：投出票时重置
-	}else{
-		rf.Log("vote to ")
-		reply.vote=true
-		rf.tstatue.isvote=true
-		rf.Upelection()
-	}
-}
-//
-// example RequestVote RPC handler.
-//
-func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
-	// Your code here (2A, 2B).
-	rf.Log("recieve a vote which come from %v",args.candidate)
-	//如果arg的term大于我的term，reply=args.term，如果arg的term小于我的term，不改直接发
-	reply.term=rf.term
-	switch rf.statue {
-
-	case leader:
-		//收到大于自己任期号，说明leader落后了,投票然后转为follower
-		if args.term>rf.term{
-			rf.statue=follower
-			rf.Updateterm(args.term)
-			reply.term=rf.term
-
-			Vote(rf,reply)
-		}else {
-			reply.vote=false
-		}
-	case candidate:
-		//如果candidate收到了比他任期号还大的请求，降级为follower
-		if args.term>rf.term{
-			rf.statue=follower
-			rf.Updateterm(args.term)
-			reply.term=rf.term
-			Vote(rf,reply)
-		}else {
-			reply.vote=false
-		}
-	case follower:
-		//如果任期号相等,是不投票的！
-		if args.term>rf.term{  //说明进入下一次任期了
-			//reply.term=rf.term
-			rf.Updateterm(args.term)
-			reply.term=rf.term
-			Vote(rf,reply)
-		}else {
-			reply.vote=false
-		}
-
-	}
-}
-//对append的回应：注意：不要将心跳和日志append分开处理！！！！
-func (rf *Raft) RequestApp(args *AppendEntriesArgs, reply *AppendEntriesReply)  {
-
-	rf.Log("receive a keep-alive from leader %v which term %v",args.leaderId,args.term)
-	if args.term>rf.term{
-		rf.Updateterm(args.term)
-	}
-	if args.term>=rf.term{
-		rf.statue=follower
-		//收到心跳包
-		rf.Upelection()
-
-		reply.success=true
-		reply.term=rf.term
-	}else{
-		//如果收到term比我低的心跳包，要重置时间吗？应该不用吧。。。
-		reply.term=rf.term
-		reply.success=false
-	}
-
-}
-
-func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *RequestVoteReply) bool {
-	rf.Log("Send a quest vote to %v",server)
-	ok := rf.peers[server].Call("Raft.RequestVote", args, reply)
-	for !ok{
-		if rf.killed()==true{
-			return false
-		}
-		ok = rf.peers[server].Call("Raft.RequestVote", args, reply)
-	}
-	rf.mu.Lock()
-	defer rf.mu.Unlock()
-	switch rf.statue {
-	//对于leader而言，如果reply的term》leader，说明leader已经过期了
-	case leader:
-		if reply.term>rf.term{
-			rf.Log("receive a higher request %v",reply.term)
-			rf.statue=follower
-			return ok
-		}
-	case candidate:
-		//如果reply的任期比我还高，那么candidate转为follower，停止投票
-		if reply.term>rf.term{
-			rf.statue=follower
-			//如果收到比我任期还大的，不用重设超时时间
-			return ok
-		}
-		rf.tstatue.votenum+=1
-		if rf.tstatue.votenum>=(rf.cluster/2+1){
-			rf.Log("Become leader!!!!")
-			rf.statue=leader
-			rf.Updateterm(rf.term+1)
-
-			rf.Keepalive()
-			//向所有节点发送keep-alive
-		}
-
-	}
-	return ok
-}
-func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *AppendEntriesReply) bool {
-	ok := rf.peers[server].Call("Raft.RequestApp", args, reply)
-	for !ok{
-		if rf.killed() {
-			return false
-		}
-		ok=rf.peers[server].Call("Raft.RequestApp", args, reply)
-	}
-	//对于leader而言，如果reply的term》leader，说明leader已经过期了
-
-	if reply.term>rf.term{
-		rf.statue=follower
-		return ok
-	}
-
-	return reply.success
-}
-
 
 
 //Start（命令）要求Raft启动处理，将命令附加到复制的日志。Start（）应立即返回，而不必等待日志附加完成。
@@ -382,100 +505,6 @@ func (rf *Raft) killed() bool {
 	return z == 1
 }
 
-//开始选举，如果每当选，说明都没发送，等待下次ticker
-func(rf*Raft)  Leaderelection() {
-	rf.statue=candidate
-	var  args=RequestVoteArgs{rf.term,rf.me,0,0}
-
-	for i := range rf.peers {
-		if i != rf.me {
-			var  reply = RequestVoteReply{}
-			//应该要并发处理，否则，发完一个就卡住了！！！
-			go rf.sendRequestVote(i, &args, &reply)
-		}
-	}
-}
-//一条日志
-type Entry struct {
-	Command	interface{}
-	Term	int
-	Index	int
-	IsEmpty	bool
-}
-type AppendEntriesArgs struct {
-	// Your data here (2A, 2B).
-	// 领导人的任期号
-	term			int
-	// 领导的Id
-	leaderId		int
-	// 最后日志条目的索引值
-	prevLogIndex	int
-	// 最后日志条目的任期号
-	prevLogTerm		int
-	// 准备存储的日志条目
-	entries 		[]Entry
-	// 领导人已经提交的日志的索引值
-	leaderCommit	int
-}
-
-//
-// example RequestVote RPC reply structure.
-// field names must start with capital letters!
-//
-type AppendEntriesReply struct {
-
-	// Your data here (2A).
-	// 当前任期号，以便于领导人去更新自己的任期号
-	term 		int
-	// Follower匹配了PrevLogIndex和PrevLogTerm时为真
-	success		bool
-
-}
-//leader维持心跳
-func (rf* Raft) Keepalive()  {
-	args:=AppendEntriesArgs{term: rf.term,leaderId:rf.me}
-
-	for i:=0;i< len(rf.peers);i++{
-		if i!=rf.me{
-			reply:=AppendEntriesReply{}
-			go rf.sendAppendEntry(i,&args,&reply)
-		}
-	}
-}
-//ticker会以心跳为周期不断检查状态。如果当前是Leader就会发送心跳包，而心跳包是靠appendEntries()发送空log
-// The ticker go routine starts a new election if this peer hasn't received
-// heartsbeats recently.
-func (rf *Raft) ticker() {
-	rf.Log("Ticker")
-	for rf.killed() == false {
-		//defer rf.mu.Unlock()
-		//当超时时
-
-
-		//当超时时
-		time.Sleep(rf.heartBeat)
-		if rf.killed()==false{
-			return
-		}
-		rf.mu.Lock()
-		if rf.statue==leader{
-			rf.Log("start keep-alive")
-			rf.Keepalive()
-			//如果现在的时间超出选举时间，说明超时了，开始选举
-		}else if time.Now().After(rf.electiontime){
-			rf.Log("start election")
-			rf.statue=candidate
-			rf.Updateterm(rf.term+1)
-			rf.tstatue.votenum+=1
-			rf.tstatue.isvote=true
-			rf.Upelection()
-			rf.Leaderelection()
-		}
-		rf.mu.Unlock()
-
-
-	}
-}
 
 //
 // the service or tester wants to create a Raft server. the ports
@@ -488,37 +517,8 @@ func (rf *Raft) ticker() {
 // Make() must return quickly, so it should start goroutines
 // for any long-running work.
 //
-func Make(peers []*labrpc.ClientEnd, me int,
-	persister *Persister, applyCh chan ApplyMsg) *Raft {
-	rf := &Raft{}
-	rf.peers = peers
-	rf.persister = persister
-	rf.me = me
 
-	rf.statue=follower
-	//30ms为一心跳
-	rf.heartBeat=30 * time.Millisecond
-
-	//初始的超时时间应该是随机的，防止大部分节点同时到candidate
-	rf.timeout=time.Duration(150*rand.Intn(200))* time.Millisecond//150-350ms的超时时间
-	rf.timer=time.NewTicker(rf.timeout)
-	//设置超时时间，超时时间》心跳
-
-	rf.Updateterm(0)
-
-	// Your initialization code here (2A, 2B, 2C).
-	//bug1：time.Time类型才能加减，time.Duration不行
-	rf.timeBegin=time.Now()
-	// initialize from state persisted before a crash
-	rf.readPersist(persister.ReadRaftState())
-	rf.Log("Start")
-	// start ticker goroutine to start elections
-	go rf.ticker()
-
-
-	return rf
-}
-
+//运行时间 peer id号 （状态：0-follower 1-candidate 2-leader） 任期
 func(rf *Raft) Log(format string,a ...interface{}) {
 	RaftPrint:=true
 	if RaftPrint {
