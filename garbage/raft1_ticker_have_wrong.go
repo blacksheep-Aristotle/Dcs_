@@ -1,4 +1,4 @@
-package raft
+package garbage
 
 //
 // this is an outline of the API that raft must expose to
@@ -75,9 +75,8 @@ type Raft struct {
 	timeout		  time.Duration  //超时时间，超过就开始选举
 	//：a）你从当前的领导者那里得到一个AppendEntries RPC（即，如果AppendEntries参数中的任期已经过时，你不应该重启你的计时器）；
 	//b）你正在开始一个选举；或者c）你授予另一个对等体一个投票。
-	//timer*              time.Ticker  //定时器
 	timeBegin	  time.Time //start time used to debug
-	electiontime  time.Time
+	electiontime  time.Time  //选举时间
 	//以下的元素，每次新任期开始都要清空
 	tstatue	termstatue
 
@@ -205,7 +204,6 @@ type RequestVoteReply struct {
 	term int //自己的任期号
 	vote bool //是否投票：true=同意
 }
-
 ////：a）你从当前的领导者那里得到一个AppendEntries RPC（即，如果AppendEntries参数中的任期已经过时，你不应该重启你的计时器）；
 //	//b）你正在开始一个选举；或者c）你授予另一个对等体一个投票。
 func(rf*Raft) Upelection() {
@@ -254,7 +252,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 		}
 	case candidate:
 		//如果candidate收到了比他任期号还大的请求，降级为follower
-		if args.term>rf.term{
+		if(args.term>rf.term){
 			rf.statue=follower
 			rf.Updateterm(args.term)
 			reply.term=rf.term
@@ -264,7 +262,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 		}
 	case follower:
 		//如果任期号相等,是不投票的！
-		if args.term>rf.term{  //说明进入下一次任期了
+		if(args.term>rf.term){  //说明进入下一次任期了
 			//reply.term=rf.term
 			rf.Updateterm(args.term)
 			reply.term=rf.term
@@ -328,7 +326,7 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 			rf.Log("Become leader!!!!")
 			rf.statue=leader
 			rf.Updateterm(rf.term+1)
-
+			rf.timer.Reset(rf.heartBeat)
 			rf.Keepalive()
 			//向所有节点发送keep-alive
 		}
@@ -348,7 +346,8 @@ func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *Appe
 
 	if reply.term>rf.term{
 		rf.statue=follower
-		return ok
+		rf.Updateterm(reply.term)
+		return reply.success
 	}
 
 	return reply.success
@@ -374,7 +373,7 @@ func (rf *Raft) Kill() {
 	atomic.StoreInt32(&rf.dead, 1)
 	// Your code here, if desired.
 	rf.Log("I AM DEAD")
-
+	rf.timer.Stop()
 }
 
 func (rf *Raft) killed() bool {
@@ -442,16 +441,21 @@ func (rf* Raft) Keepalive()  {
 		}
 	}
 }
+func (rf*Raft)Electioncycle()  {
+
+}
+func (rf*Raft)Heartcycle()  {
+
+}
+func (rf*Raft)Overcycle()  {
+
+}
 //ticker会以心跳为周期不断检查状态。如果当前是Leader就会发送心跳包，而心跳包是靠appendEntries()发送空log
 // The ticker go routine starts a new election if this peer hasn't received
 // heartsbeats recently.
 func (rf *Raft) ticker() {
-	rf.Log("Ticker")
 	for rf.killed() == false {
 		//defer rf.mu.Unlock()
-		//当超时时
-
-
 		//当超时时
 		time.Sleep(rf.heartBeat)
 		if rf.killed()==false{
@@ -472,7 +476,6 @@ func (rf *Raft) ticker() {
 			rf.Leaderelection()
 		}
 		rf.mu.Unlock()
-
 
 	}
 }
@@ -502,6 +505,7 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	//初始的超时时间应该是随机的，防止大部分节点同时到candidate
 	rf.timeout=time.Duration(150*rand.Intn(200))* time.Millisecond//150-350ms的超时时间
 	rf.timer=time.NewTicker(rf.timeout)
+	rf.electiontime=time.Now().Add(rf.timeout)
 	//设置超时时间，超时时间》心跳
 
 	rf.Updateterm(0)
