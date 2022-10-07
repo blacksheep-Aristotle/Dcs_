@@ -284,6 +284,9 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	// Your code here (2A, 2B).
 	rf.Log("recieve a vote which come from %v",args.Candidate)
 	//如果arg的term大于我的term，reply=args.term，如果arg的term小于我的term，不改直接发
+	rf.mu.Lock()
+	defer rf.mu.Unlock()
+
 	reply.Term=rf.term
 	switch rf.statue {
 
@@ -385,10 +388,11 @@ func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *Appe
 		ok=rf.peers[server].Call("Raft.RequestApp", args, reply)
 	}
 	//对于leader而言，如果reply的term》leader，说明leader已经过期了
-
+	rf.mu.Lock()
+	defer rf.mu.Unlock()
 	if reply.Term>rf.term{
 		rf.statue=follower
-		return ok
+		return reply.Success
 	}
 
 	return reply.Success
@@ -398,6 +402,9 @@ func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *Appe
 func (rf *Raft) RequestApp(args *AppendEntriesArgs, reply *AppendEntriesReply)  {
 
 	rf.Log("receive a keep-alive from leader %v which term %v",args.Leaderid,args.Term)
+
+	rf.mu.Lock()
+	defer rf.mu.Unlock()
 	if args.Term>rf.term{
 		rf.Updateterm(args.Term)
 	}
