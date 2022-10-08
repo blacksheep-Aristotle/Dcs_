@@ -18,6 +18,9 @@ package raft
 //
 
 import (
+	"debug/dwarf"
+	"os"
+
 	//"debug/elf"
 	"fmt"
 	"math/rand"
@@ -44,6 +47,7 @@ import (
 // snapshots) on the applyCh, but set CommandValid to false for these
 // other uses.
 //
+//
 type ApplyMsg struct {
 	CommandValid bool
 	Command      interface{}
@@ -66,26 +70,30 @@ type Raft struct {
 	persister *Persister          // Object to hold this peer's persisted state
 	me        int                 // this peer's index into peers[]
 	dead      int32               // set by Kill()
-
 	cluster int     //集群中节点的数量
 	statue mstatue  //raft的状态
 	leaderid int  //leader的id
 	term int //我的任期号
+
+
+	Commitindex  int//已知被提交的最高日志条目的索引（初始化为0，单调增加）
+	LastApplied  int //已应用于状态机的最高日志条目的索引（初始化为0，单调增加）
+	NextIndex[] int //对于每个服务器，要发送给该服务器的下一个日志条目的索引（初始化为领导者的最后一个日志索引+1）
+	matchIndex[] int //对于每个服务器，已知在服务器上复制的最高日志条目的索引（初始化为0，单调增加）
+	applyCh   chan ApplyMsg
+	applyCond *sync.Cond
+	Logs []Entry
+
 	heartBeat     time.Duration  //leader的心跳时间
 	timeout		  time.Duration  //超时时间，超过就开始选举
-	//：a）你从当前的领导者那里得到一个AppendEntries RPC（即，如果AppendEntries参数中的任期已经过时，你不应该重启你的计时器）；
-	//b）你正在开始一个选举；或者c）你授予另一个对等体一个投票。
 	timeBegin	  time.Time //start time used to debug
 	electiontime  time.Time
-	//以下的元素，每次新任期开始都要清空
-	tstatue	termstatue
+	tstatue	termstatue //以下的元素，每次新任期开始都要清空
 
 	// Your data here (2A, 2B, 2C).
 	// Look at the paper's Figure 2 for a description of what
 	// state a Raft server must maintain.
-	// 用来写入通道
-	applyCh   chan ApplyMsg
-	applyCond *sync.Cond
+
 
 }
 type termstatue struct {
@@ -120,7 +128,6 @@ type RequestVoteReply struct {
 type Entry struct {
 	Command	interface{}
 	Term	int
-	Index	int
 	Isempty	bool
 }
 type AppendEntriesArgs struct {
@@ -133,16 +140,12 @@ type AppendEntriesArgs struct {
 	Previogindex	int
 	// 最后日志条目的任期号
 	Previogierm		int
-	// 准备存储的日志条目
+	// 准备存储的日志条目（做心跳使用时，内容为空；为了提高效率可一次性发送多个）
 	Entries 		[]Entry
-	// 领导人已经提交的日志的索引值
+	// 领导人已经提交的最高日志值
 	Ladercommit	int
 }
 
-//
-// example RequestVote RPC reply structure.
-// field names must start with capital letters!
-//
 type AppendEntriesReply struct {
 
 	// Your data here (2A).
@@ -150,7 +153,8 @@ type AppendEntriesReply struct {
 	Term 		int
 	// Follower匹配了PrevLogIndex和PrevLogTerm时为真
 	Success		bool
-
+	// 更新请求节点的nextIndex【i】
+	Upnextindex	int
 }
 func Make(peers []*labrpc.ClientEnd, me int,
 	persister *Persister, applyCh chan ApplyMsg) *Raft {
@@ -167,15 +171,16 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	//-----------------------------------------------------------about time
 	//30ms为一心跳
 	rf.heartBeat=30 * time.Millisecond
-	//初始的超时时间应该是随机的，防止大部分节点同时到candidate
-	rf.timeout=time.Duration(150*rand.Intn(200))* time.Millisecond//150-350ms的超时时间
+	//初始的超时时间应该是随机的，防止大部分节同时到candidate
+	rf.timeout=time.Duration(150+rand.Intn(200))* time.Millisecond//150-350ms的超时时间
+	//rf.Log("timeout %v",rf.timeout)
 	rf.electiontime=time.Now().Add(rf.timeout)
 	//bug1：time.Time类型才能加减，time.Duration不行
 	rf.timeBegin=time.Now()
 
 	//--------------------------------------------------------start work
 	rf.readPersist(persister.ReadRaftState())
-	rf.Log("Start")
+	//rf.Log("Start")
 	// start ticker goroutine to start elections
 	go rf.ticker()
 	//开始工作，用来接受log
@@ -189,6 +194,8 @@ func (rf *Raft) GetState() (int, bool) {
 	var term int
 	var isleader bool
 	// Your code here (2A).
+	rf.mu.Lock()
+	defer rf.mu.Unlock()
 	term=rf.term
 	isleader=false
 	if rf.statue==leader{
@@ -208,18 +215,19 @@ func (rf *Raft) ticker() {
 		//defer rf.mu.Unlock()
 		//当超时时
 
-
+		//rf.Log("Ticker %v",rf.heartBeat)
 		//当超时时
-		time.Sleep(rf.heartBeat)
-		if rf.killed()==false{
-			return
-		}
+		time.Sleep(30 * time.Millisecond)
+		//if rf.killed()==false{
+		//	return
+		//}
+		//rf.Log("timeout")
 		rf.mu.Lock()
 		if rf.statue==leader{
-			rf.Log("start keep-alive")
+			//rf.Log("start keep-alive")
 			rf.Keepalive()
 			//如果现在的时间超出选举时间，说明超时了，开始选举
-		}else if time.Now().After(rf.electiontime){
+		}else if time.Now().After(rf.electiontime) {
 			rf.Log("start election")
 			rf.statue=candidate
 			rf.Updateterm(rf.term+1)
@@ -255,7 +263,7 @@ func(rf*Raft)  Leaderelection() {
 ////：a）你从当前的领导者那里得到一个AppendEntries RPC（即，如果AppendEntries参数中的任期已经过时，你不应该重启你的计时器）；
 //	//b）你正在开始一个选举；或者c）你授予另一个对等体一个投票。
 func(rf*Raft) Upelection() {
-	t:=time.Duration(150*rand.Intn(200))* time.Millisecond
+	t:=time.Duration(150+rand.Intn(200))* time.Millisecond
 	rf.electiontime=time.Now().Add(t)
 }
 //更新任期
@@ -266,12 +274,12 @@ func(rf *Raft) Updateterm(t int)  {
 	//更新时间
 	//rf.tstatue.Time
 }
-func Vote(rf*Raft,reply*RequestVoteReply)  {
+func Vote(rf*Raft,args *RequestVoteArgs,reply*RequestVoteReply)  {
 	if rf.tstatue.Isvote{
 		reply.Vote=false
 		//三种情况之一：投出票时重置
 	}else{
-		rf.Log("vote to ")
+		rf.Log("vote to %v",args.Candidate)
 		reply.Vote=true
 		rf.tstatue.Isvote=true
 		rf.Upelection()
@@ -282,11 +290,12 @@ func Vote(rf*Raft,reply*RequestVoteReply)  {
 //
 func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	// Your code here (2A, 2B).
-	rf.Log("recieve a vote which come from %v",args.Candidate)
+
 	//如果arg的term大于我的term，reply=args.term，如果arg的term小于我的term，不改直接发
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
 
+	rf.Log("recieve a vote which come from %v",args.Candidate)
 	reply.Term=rf.term
 	switch rf.statue {
 
@@ -297,7 +306,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 			rf.Updateterm(args.Term)
 			reply.Term=rf.term
 
-			Vote(rf,reply)
+			Vote(rf,args,reply)
 		}else {
 			reply.Vote=false
 		}
@@ -307,7 +316,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 			rf.statue=follower
 			rf.Updateterm(args.Term)
 			reply.Term=rf.term
-			Vote(rf,reply)
+			Vote(rf,args,reply)
 		}else {
 			reply.Vote=false
 		}
@@ -317,16 +326,15 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 			//reply.term=rf.term
 			rf.Updateterm(args.Term)
 			reply.Term=rf.term
-			Vote(rf,reply)
+			Vote(rf,args,reply)
 		}else {
 			reply.Vote=false
 		}
 
 	}
 }
-
 func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *RequestVoteReply) bool {
-	rf.Log("Send a quest vote to %v",server)
+
 	ok := rf.peers[server].Call("Raft.RequestVote", args, reply)
 	for !ok{
 		if rf.killed()==true{
@@ -336,33 +344,41 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 	}
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
+
 	switch rf.statue {
 	//对于leader而言，如果reply的term》leader，说明leader已经过期了
 	case leader:
 		if reply.Term>rf.term{
 			rf.Log("receive a higher request %v",reply.Term)
 			rf.statue=follower
-			return ok
+			rf.Updateterm(reply.Term)
+			return reply.Vote
 		}
 	case candidate:
 		//如果reply的任期比我还高，那么candidate转为follower，停止投票
 		if reply.Term>rf.term{
+			rf.Log("receive a higher request %v",reply.Term)
 			rf.statue=follower
 			//如果收到比我任期还大的，不用重设超时时间
-			return ok
+			rf.Updateterm(reply.Term)
+			return reply.Vote
 		}
-		rf.tstatue.Votenum+=1
-		if rf.tstatue.Votenum>=(rf.cluster/2+1){
-			rf.Log("Become leader!!!!")
-			rf.statue=leader
-			rf.Updateterm(rf.term+1)
+		if reply.Vote {
+			rf.tstatue.Votenum+=1
+			if rf.tstatue.Votenum>=(rf.cluster/2+1){
+				rf.Log("Become leader!!!!")
+				rf.statue=leader
+				rf.Updateterm(rf.term+1)
 
-			rf.Keepalive()
-			//向所有节点发送keep-alive
+				rf.Keepalive()
+				//向所有节点发送keep-alive
+				return reply.Vote
+			}
 		}
+
 
 	}
-	return ok
+	return reply.Vote
 }
 
 //--------------------------------------------------------keep-alive---------------------------------------------
@@ -401,7 +417,7 @@ func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *Appe
 //对append的回应：注意：不要将心跳和日志append分开处理！！！！
 func (rf *Raft) RequestApp(args *AppendEntriesArgs, reply *AppendEntriesReply)  {
 
-	rf.Log("receive a keep-alive from leader %v which term %v",args.Leaderid,args.Term)
+	//rf.Log("receive a keep-alive from leader %v which term %v",args.Leaderid,args.Term)
 
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
@@ -420,6 +436,33 @@ func (rf *Raft) RequestApp(args *AppendEntriesArgs, reply *AppendEntriesReply)  
 		reply.Term=rf.term
 		reply.Success=false
 	}
+
+}
+//--------------------------------------------------------Log部分---------------------------------------------
+//Start（命令）要求Raft启动处理，将命令附加到复制的日志。Start（）应立即返回，而不必等待日志附加完成。
+//该服务希望您的实现为每个新提交的日志条目向applyCh通道参数Make（）发送ApplyMsg。
+
+func (rf *Raft) Start(command interface{}) (int, int, bool) {
+	index :=-1
+	term := rf.term
+	isLeader := false
+	if rf.statue==leader{
+		isLeader=true
+		e:=Entry{
+			Command: command,
+			Term: rf.term,
+			Isempty: false,
+		}
+		rf.Logs = append(rf.Logs,e )
+	}
+	// Your code here (2B).
+
+
+
+	return index, term, isLeader
+}
+
+func (rf* Raft)Append()   {
 
 }
 //--------------------------------------------------------持久化部分---------------------------------------------
@@ -486,25 +529,14 @@ func (rf *Raft) Snapshot(index int, snapshot []byte) {
 
 
 
-//Start（命令）要求Raft启动处理，将命令附加到复制的日志。Start（）应立即返回，而不必等待日志附加完成。
-//该服务希望您的实现为每个新提交的日志条目向applyCh通道参数Make（）发送ApplyMsg。
-func (rf *Raft) Start(command interface{}) (int, int, bool) {
-	index := -1
-	term := -1
-	isLeader := true
-
-	// Your code here (2B).
-
-
-	return index, term, isLeader
-}
 
 
 func (rf *Raft) Kill() {
 	atomic.StoreInt32(&rf.dead, 1)
 	// Your code here, if desired.
+	rf.mu.Lock()
 	rf.Log("I AM DEAD")
-
+	rf.mu.Unlock()
 }
 
 func (rf *Raft) killed() bool {
@@ -524,10 +556,9 @@ func (rf *Raft) killed() bool {
 // Make() must return quickly, so it should start goroutines
 // for any long-running work.
 //
-
+const RaftPrint = true
 //运行时间 peer id号 （状态：0-follower 1-candidate 2-leader） 任期
 func(rf *Raft) Log(format string,a ...interface{}) {
-	RaftPrint:=true
 	if RaftPrint {
 		format = "%v: [peer %v (%v) at Term %v] " + format + "\n"
 		a = append([]interface{}{time.Now().Sub(rf.timeBegin).Milliseconds(), rf.me, rf.statue, rf.term}, a...)
