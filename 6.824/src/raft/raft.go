@@ -18,11 +18,12 @@ package raft
 //
 
 import (
-	"debug/dwarf"
-	"os"
+	"debug/elf"
+	"flag"
 
 	//"debug/elf"
 	"fmt"
+	"go/ast"
 	"math/rand"
 	//"unicode"
 
@@ -77,7 +78,7 @@ type Raft struct {
 
 
 	Commitindex  int//已知被提交的最高日志条目的索引（初始化为0，单调增加）
-	LastApplied  int //已应用于状态机的最高日志条目的索引（初始化为0，单调增加）
+	LastApplied  int //已提交的最高日志索引（初始化为0，单调增加）
 	NextIndex[] int //对于每个服务器，要发送给该服务器的下一个日志条目的索引（初始化为领导者的最后一个日志索引+1）
 	matchIndex[] int //对于每个服务器，已知在服务器上复制的最高日志条目的索引（初始化为0，单调增加）
 	applyCh   chan ApplyMsg
@@ -109,53 +110,6 @@ const (
 	leader
 )
 
-
-// --------------------------------------------------------RPC参数部分----------------------------------------------------
-type RequestVoteArgs struct {
-	// Your data here (2A, 2B).
-	Term int //自己的任期号
-	Candidate int //自己的id
-	Lastlogindex int//自己最后的日志号
-	Lastlogterm int//自己最后的日志的任期
-}
-
-type RequestVoteReply struct {
-	// Your data here (2A).
-	Term int //自己的任期号
-	Vote bool //是否投票：true=同意
-}
-//一条日志
-type Entry struct {
-	Command	interface{}
-	Term	int
-	Isempty	bool
-}
-type AppendEntriesArgs struct {
-	// Your data here (2A, 2B).
-	// 领导人的任期号
-	Term			int
-	// 领导的Id
-	Leaderid		int
-	// 最后日志条目的索引值
-	Previogindex	int
-	// 最后日志条目的任期号
-	Previogierm		int
-	// 准备存储的日志条目（做心跳使用时，内容为空；为了提高效率可一次性发送多个）
-	Entries 		[]Entry
-	// 领导人已经提交的最高日志值
-	Ladercommit	int
-}
-
-type AppendEntriesReply struct {
-
-	// Your data here (2A).
-	// 当前任期号，以便于领导人去更新自己的任期号
-	Term 		int
-	// Follower匹配了PrevLogIndex和PrevLogTerm时为真
-	Success		bool
-	// 更新请求节点的nextIndex【i】
-	Upnextindex	int
-}
 func Make(peers []*labrpc.ClientEnd, me int,
 	persister *Persister, applyCh chan ApplyMsg) *Raft {
 	rf := &Raft{}
@@ -165,6 +119,11 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	//------------------------------------------------------about log
 	rf.applyCh = applyCh
 	rf.applyCond = sync.NewCond(&rf.mu)
+	rf.Commitindex=0  //提交的日志下标
+	rf.LastApplied=0  //提交了的日志下标
+	rf.NextIndex=make([]int,len(peers))  //各个节点要发送的下一个日志下标---》当前发送的日志下标=next-1
+	rf.matchIndex=make([]int,len(peers)) //各个节点以提交的最大下标
+	rf.Logs=make([]Entry,0)
 	//-------------------------------------------------------about term
 	rf.Updateterm(0)
 	rf.statue=follower
@@ -188,6 +147,53 @@ func Make(peers []*labrpc.ClientEnd, me int,
 
 	return rf
 }
+// --------------------------------------------------------RPC参数部分----------------------------------------------------
+type RequestVoteArgs struct {
+	// Your data here (2A, 2B).
+	Term int //自己的任期号
+	Candidate int //自己的id
+	Lastlogindex int//自己最后的日志号
+	Lastlogterm int//自己最后的日志的任期
+}
+
+type RequestVoteReply struct {
+	// Your data here (2A).
+	Term int //自己的任期号
+	Vote bool //是否投票：true=同意
+}
+//一条日志
+type Entry struct {
+	Command	interface{}
+	Term	int
+}
+type AppendEntriesArgs struct {
+	// Your data here (2A, 2B).
+	// 领导人的任期号
+	Term			int
+	// 领导的Id
+	Leaderid		int
+	//--------这两个是用来一致性检查，只有都和follower一致，才会被接受，否则
+	// 前一个日志号
+	Previogindex	int
+	// 前一个日志的任期号
+	Previogierm		int
+	// 准备存储的日志条目（做心跳使用时，内容为空；为了提高效率可一次性发送多个）
+	Entries 		[]Entry
+	// 领导人已经提交的最高日志值 comm=min(Ladercommit,my last log)
+	Ladercommit	int
+}
+
+type AppendEntriesReply struct {
+
+	// Your data here (2A).
+	// 当前任期号，以便于领导人去更新自己的任期号
+	Term 		int
+	// Follower匹配了PrevLogIndex和PrevLogTerm时为真
+	Success		bool
+	// 更新请求节点的nextIndex【i】,是发送未提交的最大值还是全部日志的最大值？？
+	Upnextindex	int
+}
+
 // return currentTerm and whether this server
 // believes it is the leader.
 func (rf *Raft) GetState() (int, bool) {
@@ -225,7 +231,7 @@ func (rf *Raft) ticker() {
 		rf.mu.Lock()
 		if rf.statue==leader{
 			//rf.Log("start keep-alive")
-			rf.Keepalive()
+			rf.Keepalive()  //keep-alive如果有新加的条目，就一次性发送
 			//如果现在的时间超出选举时间，说明超时了，开始选举
 		}else if time.Now().After(rf.electiontime) {
 			rf.Log("start election")
@@ -250,7 +256,7 @@ func (rf* Raft) Worker()  {
 //开始选举，如果每当选，说明都没发送，等待下次ticker
 func(rf*Raft)  Leaderelection() {
 	rf.statue=candidate
-	var  args=RequestVoteArgs{rf.term,rf.me,0,0}
+	var  args=RequestVoteArgs{rf.term,rf.me,len(rf.Logs),rf.Logs[len(rf.Logs)-1].Term}
 
 	for i := range rf.peers {
 		if i != rf.me {
@@ -288,6 +294,9 @@ func Vote(rf*Raft,args *RequestVoteArgs,reply*RequestVoteReply)  {
 //
 // example RequestVote RPC handler.
 //
+//
+// example RequestVote RPC handler.
+//
 func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	// Your code here (2A, 2B).
 
@@ -297,41 +306,32 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 
 	rf.Log("recieve a vote which come from %v",args.Candidate)
 	reply.Term=rf.term
-	switch rf.statue {
 
-	case leader:
-		//收到大于自己任期号，说明leader落后了,投票然后转为follower
-		if args.Term>rf.term{
-			rf.statue=follower
-			rf.Updateterm(args.Term)
-			reply.Term=rf.term
-
-			Vote(rf,args,reply)
-		}else {
+	//如果任期号相等,是不投票的！
+	if args.Term>rf.term{  //说明进入下一次任期了
+		rf.statue=follower
+		rf.Updateterm(reply.Term)
+		if args.Lastlogterm<rf.Logs[len(rf.Logs)-1].Term{
 			reply.Vote=false
-		}
-	case candidate:
-		//如果candidate收到了比他任期号还大的请求，降级为follower
-		if args.Term>rf.term{
-			rf.statue=follower
-			rf.Updateterm(args.Term)
+			reply.Term=rf.term
+			return
+		}else if args.Lastlogterm==rf.Logs[len(rf.Logs)-1].Term {
+			if args.Lastlogindex<len(rf.Logs){
+				reply.Vote=false
+				reply.Term=rf.term
+				return
+			}
+		}else {
 			reply.Term=rf.term
 			Vote(rf,args,reply)
-		}else {
-			reply.Vote=false
-		}
-	case follower:
-		//如果任期号相等,是不投票的！
-		if args.Term>rf.term{  //说明进入下一次任期了
-			//reply.term=rf.term
-			rf.Updateterm(args.Term)
-			reply.Term=rf.term
-			Vote(rf,args,reply)
-		}else {
-			reply.Vote=false
 		}
 
+
+	}else {
+		reply.Vote=false
 	}
+
+
 }
 func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *RequestVoteReply) bool {
 
@@ -385,20 +385,40 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 
 //leader维持心跳
 func (rf* Raft) Keepalive()  {
-	args:=AppendEntriesArgs{Term: rf.term,Leaderid:rf.me}
-
+	num:=1
 	for i:=0;i< len(rf.peers);i++{
 		if i!=rf.me{
+			args:=AppendEntriesArgs{
+				Term: rf.term,
+				Leaderid:rf.me,
+				Previogierm: 0,
+				Previogindex: 0,
+				Entries: nil,
+				Ladercommit: rf.Commitindex,
+			}
 			reply:=AppendEntriesReply{}
-			go rf.sendAppendEntry(i,&args,&reply)
+			go rf.sendAppendEntry(i,&args,&reply,&num)
 		}
 	}
 }
+//如果follower没有响应，不断重发。如果follower拒绝，根据reply.Upnextindex恢复follower缺少的日志
+func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *AppendEntriesReply,num* int) bool {
 
-func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *AppendEntriesReply) bool {
+	//将节点缺失的日志一次性全发出去！！！而不是等到服务端一次次回滚
+	args.Entries=rf.Logs[rf.NextIndex[server]-1:]
+
+	//说明不是第一次
+	if rf.NextIndex[server]>0{
+
+		args.Previogindex=rf.NextIndex[server]-1
+	}
+	if args.Previogindex>0{
+
+		args.Previogierm=rf.Logs[args.Previogindex-1].Term
+	}
 	ok := rf.peers[server].Call("Raft.RequestApp", args, reply)
 	for !ok{
-		if rf.killed() {
+		if rf.killed()||rf.statue!=leader {
 			return false
 		}
 		ok=rf.peers[server].Call("Raft.RequestApp", args, reply)
@@ -406,15 +426,40 @@ func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *Appe
 	//对于leader而言，如果reply的term》leader，说明leader已经过期了
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
+
 	if reply.Term>rf.term{
 		rf.statue=follower
+		rf.Updateterm(reply.Term)
 		return reply.Success
+	}
+	if reply.Success{
+		rf.NextIndex[server]=len(args.Entries)  //可能会一次提交多条日志
+		*num+=1
+		if *num>=len(rf.peers)/2+1{
+			*num=0  //保证不会提交两次！！
+			if len(rf.Logs)==0{
+				return true
+			}
+			for rf.LastApplied<len(rf.Logs) {
+				rf.LastApplied++
+				apply:=ApplyMsg{
+					CommandValid: true,
+					CommandIndex: rf.LastApplied,
+					Command: rf.Logs[rf.LastApplied-1].Command,
+				}
+				rf.applyCh<-apply
+				rf.Commitindex=rf.LastApplied
+			}
+		}
+	}else {
+		rf.NextIndex[server]=reply.Upnextindex
 	}
 
 	return reply.Success
 }
 
 //对append的回应：注意：不要将心跳和日志append分开处理！！！！
+//
 func (rf *Raft) RequestApp(args *AppendEntriesArgs, reply *AppendEntriesReply)  {
 
 	//rf.Log("receive a keep-alive from leader %v which term %v",args.Leaderid,args.Term)
@@ -429,37 +474,51 @@ func (rf *Raft) RequestApp(args *AppendEntriesArgs, reply *AppendEntriesReply)  
 		//收到心跳包
 		rf.Upelection()
 
-		reply.Success=true
-		reply.Term=rf.term
+		//如果通过一致性检验
+		if args.Previogindex>0&& args.Previogindex<len(rf.Logs)&&rf.Logs[args.Previogindex-1].Term!=args.Previogierm{
+			rf.Logs = append(rf.Logs, args.Entries...)
+
+			for rf.LastApplied<args.Ladercommit {
+				rf.LastApplied++
+				apply:=ApplyMsg{
+					CommandValid: true,
+					CommandIndex: rf.LastApplied,
+					Command: rf.Logs[rf.LastApplied-1].Command,
+				}
+				rf.applyCh<-apply
+				rf.Commitindex=rf.LastApplied
+			}
+
+			reply.Success=true
+		}else {
+			reply.Upnextindex=rf.LastApplied+1
+			reply.Success=false
+		}
 	}else{
 		//如果收到term比我低的心跳包，要重置时间吗？应该不用吧。。。
-		reply.Term=rf.term
 		reply.Success=false
 	}
-
+	reply.Term=rf.term
 }
 //--------------------------------------------------------Log部分---------------------------------------------
 //Start（命令）要求Raft启动处理，将命令附加到复制的日志。Start（）应立即返回，而不必等待日志附加完成。
 //该服务希望您的实现为每个新提交的日志条目向applyCh通道参数Make（）发送ApplyMsg。
-
 func (rf *Raft) Start(command interface{}) (int, int, bool) {
-	index :=-1
-	term := rf.term
-	isLeader := false
-	if rf.statue==leader{
-		isLeader=true
-		e:=Entry{
-			Command: command,
-			Term: rf.term,
-			Isempty: false,
-		}
-		rf.Logs = append(rf.Logs,e )
+	rf.mu.Lock()
+	defer rf.mu.Unlock()
+
+	if rf.killed() == true||rf.statue != leader {
+		return -1, -1, false
+	} else {
+		index := len(rf.Logs) + 1
+		term := rf.term
+		rf.Logs = append(rf.Logs, Entry{Term: term, Command: command})
+		rf.persist()
+		return index, term, true
 	}
+
 	// Your code here (2B).
-
-
-
-	return index, term, isLeader
+	//return index, term, isLeader
 }
 
 func (rf* Raft)Append()   {

@@ -229,46 +229,60 @@ func Vote(rf*Raft,reply*RequestVoteReply)  {
 		rf.Upelection()
 	}
 }
-//
-// example RequestVote RPC handler.
-//
-func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
+/func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	// Your code here (2A, 2B).
-	rf.Log("recieve a vote which come from %v",args.candidate)
+
 	//如果arg的term大于我的term，reply=args.term，如果arg的term小于我的term，不改直接发
-	reply.term=rf.term
+	rf.mu.Lock()
+	defer rf.mu.Unlock()
+
+	rf.Log("recieve a vote which come from %v",args.Candidate)
+	reply.Term=rf.term
 	switch rf.statue {
 
 	case leader:
 		//收到大于自己任期号，说明leader落后了,投票然后转为follower
-		if args.term>rf.term{
+		if args.Term>rf.term{
 			rf.statue=follower
-			rf.Updateterm(args.term)
-			reply.term=rf.term
+			rf.Updateterm(args.Term)
+			reply.Term=rf.term
 
-			Vote(rf,reply)
+			Vote(rf,args,reply)
 		}else {
-			reply.vote=false
+			reply.Vote=false
 		}
 	case candidate:
 		//如果candidate收到了比他任期号还大的请求，降级为follower
-		if(args.term>rf.term){
+		if args.Term>rf.term{
 			rf.statue=follower
-			rf.Updateterm(args.term)
-			reply.term=rf.term
-			Vote(rf,reply)
+			rf.Updateterm(args.Term)
+			reply.Term=rf.term
+			Vote(rf,args,reply)
 		}else {
-			reply.vote=false
+			reply.Vote=false
 		}
 	case follower:
 		//如果任期号相等,是不投票的！
-		if(args.term>rf.term){  //说明进入下一次任期了
-			//reply.term=rf.term
-			rf.Updateterm(args.term)
-			reply.term=rf.term
-			Vote(rf,reply)
+		if args.Term>rf.term{  //说明进入下一次任期了
+
+			//如果任期号小于，不投票
+			if args.Lastlogterm<rf.Logs[len(rf.Logs)-1].Term{
+				reply.Vote=false
+				reply.Term=rf.term
+				return
+			}else if args.Lastlogterm==rf.Logs[len(rf.Logs)-1].Term {
+				if args.Lastlogindex<len(rf.Logs){
+					reply.Vote=false
+					reply.Term=rf.term
+					return
+				}
+			}else {
+				rf.Updateterm(args.Term)
+				reply.Term=rf.term
+				Vote(rf,args,reply)
+			}
 		}else {
-			reply.vote=false
+			reply.Vote=false
 		}
 
 	}
