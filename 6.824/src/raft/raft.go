@@ -218,17 +218,11 @@ func (rf *Raft) GetState() (int, bool) {
 func (rf *Raft) ticker() {
 
 	for rf.killed() == false {
-		//defer rf.mu.Unlock()
-		//当超时时
 
-		//rf.Log("Ticker %v",rf.heartBeat)
-		//当超时时
 		time.Sleep(30 * time.Millisecond)
-		//if rf.killed()==false{
-		//	return
-		//}
-		//rf.Log("timeout")
+
 		rf.mu.Lock()
+
 		if rf.statue==leader{
 			//rf.Log("start keep-alive")
 			rf.Keepalive()  //keep-alive如果有新加的条目，就一次性发送
@@ -256,7 +250,11 @@ func (rf* Raft) Worker()  {
 //开始选举，如果每当选，说明都没发送，等待下次ticker
 func(rf*Raft)  Leaderelection() {
 	rf.statue=candidate
-	var  args=RequestVoteArgs{rf.term,rf.me,len(rf.Logs),rf.Logs[len(rf.Logs)-1].Term}
+	var  args=RequestVoteArgs{rf.term,rf.me,len(rf.Logs),0}
+
+	if args.Lastlogindex>0{
+		args.Lastlogterm=rf.Logs[len(rf.Logs)-1].Term
+	}
 
 	for i := range rf.peers {
 		if i != rf.me {
@@ -307,29 +305,39 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	rf.Log("recieve a vote which come from %v",args.Candidate)
 	reply.Term=rf.term
 
-	//如果任期号相等,是不投票的！
-	if args.Term>rf.term{  //说明进入下一次任期了
+	if args.Term>rf.term{
 		rf.statue=follower
-		rf.Updateterm(reply.Term)
-		if args.Lastlogterm<rf.Logs[len(rf.Logs)-1].Term{
-			reply.Vote=false
-			reply.Term=rf.term
-			return
-		}else if args.Lastlogterm==rf.Logs[len(rf.Logs)-1].Term {
-			if args.Lastlogindex<len(rf.Logs){
+		rf.Updateterm(args.Term)
+	}
+	if rf.statue==follower{
+		if args.Term>=rf.term {
+			//如果是初始状态,不论是谁都投票
+			if len(rf.Logs)==0 {
+				Vote(rf,args,reply)
+				return
+			}
+			//否则要进行一致性检验
+			if args.Lastlogterm<rf.Logs[len(rf.Logs)-1].Term{
+				rf.Log("Vote false on yizhixing come from %v his loglastterm %v",args.Candidate,args.Lastlogterm)
 				reply.Vote=false
 				reply.Term=rf.term
 				return
+			}else if args.Lastlogterm==rf.Logs[len(rf.Logs)-1].Term {
+				if args.Lastlogindex<len(rf.Logs){
+					rf.Log("Vote false on yizhixing come from %v his Lastlogindex %v",args.Candidate,args.Lastlogindex)
+					reply.Vote=false
+					reply.Term=rf.term
+					return
+				}
+			}else {
+				rf.Log("Vote pass yizhixing")
+				reply.Term=rf.term
+				Vote(rf,args,reply)
+
 			}
-		}else {
-			reply.Term=rf.term
-			Vote(rf,args,reply)
 		}
-
-
-	}else {
-		reply.Vote=false
 	}
+
 
 
 }
@@ -337,7 +345,7 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 
 	ok := rf.peers[server].Call("Raft.RequestVote", args, reply)
 	for !ok{
-		if rf.killed()==true{
+		if rf.killed()==true||rf.statue!=candidate{
 			return false
 		}
 		ok = rf.peers[server].Call("Raft.RequestVote", args, reply)
@@ -357,6 +365,7 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 	case candidate:
 		//如果reply的任期比我还高，那么candidate转为follower，停止投票
 		if reply.Term>rf.term{
+
 			rf.Log("receive a higher request %v",reply.Term)
 			rf.statue=follower
 			//如果收到比我任期还大的，不用重设超时时间
@@ -364,12 +373,13 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 			return reply.Vote
 		}
 		if reply.Vote {
+
 			rf.tstatue.Votenum+=1
 			if rf.tstatue.Votenum>=(rf.cluster/2+1){
+
+				rf.tstatue.Votenum=0
 				rf.Log("Become leader!!!!")
 				rf.statue=leader
-				rf.Updateterm(rf.term+1)
-
 				rf.Keepalive()
 				//向所有节点发送keep-alive
 				return reply.Vote
@@ -402,9 +412,11 @@ func (rf* Raft) Keepalive()  {
 	}
 }
 //如果follower没有响应，不断重发。如果follower拒绝，根据reply.Upnextindex恢复follower缺少的日志
+//第一条有效日志：term=0
 func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *AppendEntriesReply,num* int) bool {
 
 	//将节点缺失的日志一次性全发出去！！！而不是等到服务端一次次回滚
+	//如果nextIndex[i]长度不等于rf.logs,代表与leader的log entries不一致，需要附带过去
 	args.Entries=rf.Logs[rf.NextIndex[server]-1:]
 
 	//说明不是第一次
@@ -432,7 +444,11 @@ func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *Appe
 		rf.Updateterm(reply.Term)
 		return reply.Success
 	}
+	if rf.statue!=leader{
+		return  false
+	}
 	if reply.Success{
+		rf.Log("peer accept %v",server)
 		rf.NextIndex[server]=len(args.Entries)  //可能会一次提交多条日志
 		*num+=1
 		if *num>=len(rf.peers)/2+1{
@@ -450,8 +466,10 @@ func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *Appe
 				rf.applyCh<-apply
 				rf.Commitindex=rf.LastApplied
 			}
+			rf.Log("Commited %v",rf.Commitindex)
 		}
 	}else {
+		rf.Log("peer refused %v,which want %v",server,reply.Upnextindex)
 		rf.NextIndex[server]=reply.Upnextindex
 	}
 
@@ -463,22 +481,75 @@ func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *Appe
 func (rf *Raft) RequestApp(args *AppendEntriesArgs, reply *AppendEntriesReply)  {
 
 	//rf.Log("receive a keep-alive from leader %v which term %v",args.Leaderid,args.Term)
+	Min := func(x int, y int) int {
+		if x<y{
+			return  x
+		}else {
+			return y
+		}
+	}
 
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
 	if args.Term>rf.term{
 		rf.Updateterm(args.Term)
+		rf.statue=follower
+	}
+	if rf.statue==leader{
+		reply.Success=false
+		reply.Term=rf.term
+		return
 	}
 	if args.Term>=rf.term{
-		rf.statue=follower
 		//收到心跳包
 		rf.Upelection()
+		//如果节点此时是空日志,判断是否是第一条日志，如果不是返回
+		if  len(rf.Logs)==0{
+			if args.Previogindex!=0||args.Previogierm!=0{  //说明缺失了第一条日志
+				rf.Log("miss the first")
+				reply.Success=false
+				reply.Upnextindex=0
+				reply.Term=rf.term
+				return
+			}else {
+				rf.Log("accept first")
+				// 如果存在日志包那么进行追加
+				if args.Entries != nil {
+					rf.Logs = rf.Logs[:args.Previogindex]
+					rf.Logs = append(rf.Logs, args.Entries...)
 
+				}
+				reply.Success=true
+				reply.Term=rf.term
+
+				rf.Commitindex=Min(len(rf.Logs),args.Ladercommit)
+				for rf.LastApplied<=rf.Commitindex {
+					rf.LastApplied++
+					apply:=ApplyMsg{
+						CommandValid: true,
+						CommandIndex: rf.LastApplied,
+						Command: rf.Logs[rf.LastApplied-1].Command,
+					}
+					rf.applyCh<-apply
+				}
+				rf.Log("accept the log index %v, peer have commit %v",len(rf.Logs),rf.Commitindex)
+				reply.Success=true
+				return
+			}
+		}
 		//如果通过一致性检验
 		if args.Previogindex>0&& args.Previogindex<len(rf.Logs)&&rf.Logs[args.Previogindex-1].Term!=args.Previogierm{
-			rf.Logs = append(rf.Logs, args.Entries...)
+			rf.Log("accept yizhixing ")
+			// 如果存在日志包那么进行追加
+			if args.Entries != nil {
+				rf.Logs = rf.Logs[:args.Previogindex]
+				rf.Logs = append(rf.Logs, args.Entries...)
 
-			for rf.LastApplied<args.Ladercommit {
+			}
+
+			rf.Commitindex=Min(len(rf.Logs),args.Ladercommit)
+			for rf.LastApplied<rf.Commitindex {
+
 				rf.LastApplied++
 				apply:=ApplyMsg{
 					CommandValid: true,
@@ -486,16 +557,18 @@ func (rf *Raft) RequestApp(args *AppendEntriesArgs, reply *AppendEntriesReply)  
 					Command: rf.Logs[rf.LastApplied-1].Command,
 				}
 				rf.applyCh<-apply
-				rf.Commitindex=rf.LastApplied
 			}
-
+			rf.Log("accept the log index %v, peer have commit %v",len(rf.Logs),rf.Commitindex)
 			reply.Success=true
-		}else {
+		} else {
+
 			reply.Upnextindex=rf.LastApplied+1
 			reply.Success=false
+			rf.Log("log append false, I want %v",reply.Upnextindex)
 		}
 	}else{
 		//如果收到term比我低的心跳包，要重置时间吗？应该不用吧。。。
+		rf.Log("accept a lower keep-alive! from %v",args.Leaderid)
 		reply.Success=false
 	}
 	reply.Term=rf.term
@@ -514,6 +587,8 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 		term := rf.term
 		rf.Logs = append(rf.Logs, Entry{Term: term, Command: command})
 		rf.persist()
+
+		rf.Log("a new log to leader %v",index)
 		return index, term, true
 	}
 
@@ -521,9 +596,7 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 	//return index, term, isLeader
 }
 
-func (rf* Raft)Append()   {
 
-}
 //--------------------------------------------------------持久化部分---------------------------------------------
 //
 // save Raft's persistent state to stable storage,
