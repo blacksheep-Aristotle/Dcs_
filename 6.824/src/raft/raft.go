@@ -18,12 +18,9 @@ package raft
 //
 
 import (
-	"debug/elf"
-	"flag"
 
 	//"debug/elf"
 	"fmt"
-	"go/ast"
 	"math/rand"
 	//"unicode"
 
@@ -236,6 +233,7 @@ func (rf *Raft) ticker() {
 			rf.Upelection()
 			rf.Leaderelection()
 		}
+
 		rf.mu.Unlock()
 
 
@@ -350,6 +348,7 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 		}
 		ok = rf.peers[server].Call("Raft.RequestVote", args, reply)
 	}
+
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
 
@@ -377,7 +376,7 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 			rf.tstatue.Votenum+=1
 			if rf.tstatue.Votenum>=(rf.cluster/2+1){
 
-				rf.tstatue.Votenum=0
+				rf.tstatue.Votenum=0   //防止多次唤醒
 				rf.Log("Become leader!!!!")
 				rf.statue=leader
 				rf.Keepalive()
@@ -417,9 +416,15 @@ func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *Appe
 
 	//将节点缺失的日志一次性全发出去！！！而不是等到服务端一次次回滚
 	//如果nextIndex[i]长度不等于rf.logs,代表与leader的log entries不一致，需要附带过去
-	args.Entries=rf.Logs[rf.NextIndex[server]-1:]
+	if len(rf.Logs)!=0 {
+		if rf.NextIndex[server]==0 {
+			args.Entries=rf.Logs[0:]
+		}else {
+			args.Entries=rf.Logs[rf.NextIndex[server]-1:]
+		}
+	}
 
-	//说明不是第一次
+	//说明不是第一次发送
 	if rf.NextIndex[server]>0{
 
 		args.Previogindex=rf.NextIndex[server]-1
@@ -448,8 +453,9 @@ func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *Appe
 		return  false
 	}
 	if reply.Success{
-		rf.Log("peer accept %v",server)
-		rf.NextIndex[server]=len(args.Entries)  //可能会一次提交多条日志
+		rf.Log("peer %v accept append ",server)
+		//这里有bug，如果是keeepalive，那么args.Entries=0,所以应该是+而不是=
+		rf.NextIndex[server]+=len(args.Entries)  //可能会一次提交多条日志
 		*num+=1
 		if *num>=len(rf.peers)/2+1{
 			*num=0  //保证不会提交两次！！
@@ -469,7 +475,7 @@ func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *Appe
 			rf.Log("Commited %v",rf.Commitindex)
 		}
 	}else {
-		rf.Log("peer refused %v,which want %v",server,reply.Upnextindex)
+		rf.Log("peer %v refused ,which want %v",server,reply.Upnextindex)
 		rf.NextIndex[server]=reply.Upnextindex
 	}
 
@@ -504,7 +510,8 @@ func (rf *Raft) RequestApp(args *AppendEntriesArgs, reply *AppendEntriesReply)  
 		//收到心跳包
 		rf.Upelection()
 		//如果节点此时是空日志,判断是否是第一条日志，如果不是返回
-		if  len(rf.Logs)==0{
+		//第二条日志的preidx和preterm也是0
+		if  len(rf.Logs)==0||len(rf.Logs)==1{
 			if args.Previogindex!=0||args.Previogierm!=0{  //说明缺失了第一条日志
 				rf.Log("miss the first")
 				reply.Success=false
@@ -512,7 +519,7 @@ func (rf *Raft) RequestApp(args *AppendEntriesArgs, reply *AppendEntriesReply)  
 				reply.Term=rf.term
 				return
 			}else {
-				rf.Log("accept first")
+				//rf.Log("accept first")
 				// 如果存在日志包那么进行追加
 				if args.Entries != nil {
 					rf.Logs = rf.Logs[:args.Previogindex]
@@ -523,7 +530,7 @@ func (rf *Raft) RequestApp(args *AppendEntriesArgs, reply *AppendEntriesReply)  
 				reply.Term=rf.term
 
 				rf.Commitindex=Min(len(rf.Logs),args.Ladercommit)
-				for rf.LastApplied<=rf.Commitindex {
+				for rf.LastApplied<rf.Commitindex {
 					rf.LastApplied++
 					apply:=ApplyMsg{
 						CommandValid: true,
@@ -532,13 +539,16 @@ func (rf *Raft) RequestApp(args *AppendEntriesArgs, reply *AppendEntriesReply)  
 					}
 					rf.applyCh<-apply
 				}
-				rf.Log("accept the log index %v, peer have commit %v",len(rf.Logs),rf.Commitindex)
+				rf.Log("accept the log now len %v, peer have commit %v",len(rf.Logs),rf.Commitindex)
 				reply.Success=true
 				return
 			}
 		}
 		//如果通过一致性检验
-		if args.Previogindex>0&& args.Previogindex<len(rf.Logs)&&rf.Logs[args.Previogindex-1].Term!=args.Previogierm{
+		rf.Log("Previogindex %v Previogierm %v , my loglen %v my prelogterm %v ",
+			args.Previogindex,args.Previogierm,len(rf.Logs) )
+
+		if args.Previogindex>0&& args.Previogindex<=len(rf.Logs)&&rf.Logs[args.Previogindex-1].Term==args.Previogierm{
 			rf.Log("accept yizhixing ")
 			// 如果存在日志包那么进行追加
 			if args.Entries != nil {
@@ -564,7 +574,7 @@ func (rf *Raft) RequestApp(args *AppendEntriesArgs, reply *AppendEntriesReply)  
 
 			reply.Upnextindex=rf.LastApplied+1
 			reply.Success=false
-			rf.Log("log append false, I want %v",reply.Upnextindex)
+			rf.Log("log append false, I want %v but accept a log after Previogindex %v",reply.Upnextindex,args.Previogindex)
 		}
 	}else{
 		//如果收到term比我低的心跳包，要重置时间吗？应该不用吧。。。
@@ -588,7 +598,7 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 		rf.Logs = append(rf.Logs, Entry{Term: term, Command: command})
 		rf.persist()
 
-		rf.Log("a new log to leader %v",index)
+		rf.Log("a new log to leader , now leader log len%v",index)
 		return index, term, true
 	}
 

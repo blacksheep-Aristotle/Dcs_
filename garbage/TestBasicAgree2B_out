@@ -1,0 +1,134 @@
+warning: only one CPU, which may conceal locking bugs
+Test (2B): basic agreement ...
+157: [peer 0 (0) at Term 0] start election
+158: [peer 1 (0) at Term 0] recieve a vote which come from 0
+158: [peer 1 (0) at Term 1] vote to 0
+160: [peer 2 (0) at Term 0] recieve a vote which come from 0
+160: [peer 2 (0) at Term 1] vote to 0
+161: [peer 0 (1) at Term 1] Become leader!!!!
+162: [peer 2 (0) at Term 1] Previogindex 0 Previogierm 0 , my loglen 0  
+162: [peer 2 (0) at Term 1] accept the log index 0, peer have commit 0
+163: [peer 0 (2) at Term 1] peer 2 accept append 
+163: [peer 1 (0) at Term 1] Previogindex 0 Previogierm 0 , my loglen 0  
+163: [peer 1 (0) at Term 1] accept the log index 0, peer have commit 0
+164: [peer 0 (2) at Term 1] peer 1 accept append 
+191: [peer 2 (0) at Term 1] Previogindex 0 Previogierm 0 , my loglen 0  
+191: [peer 2 (0) at Term 1] accept the log index 0, peer have commit 0
+192: [peer 0 (2) at Term 1] peer 2 accept append 
+192: [peer 1 (0) at Term 1] Previogindex 0 Previogierm 0 , my loglen 0  
+192: [peer 1 (0) at Term 1] accept the log index 0, peer have commit 0
+193: [peer 0 (2) at Term 1] peer 1 accept append 
+205: [peer 0 (2) at Term 1] a new log to leader 1
+223: [peer 1 (0) at Term 1] Previogindex 0 Previogierm 0 , my loglen 0  
+223: [peer 1 (0) at Term 1] accept the log index 1, peer have commit 0
+224: [peer 0 (2) at Term 1] peer 1 accept append 
+224: [peer 0 (2) at Term 1] Commited 1
+224: [peer 2 (0) at Term 1] Previogindex 0 Previogierm 0 , my loglen 0  
+224: [peer 2 (0) at Term 1] accept the log index 1, peer have commit 0
+226: [peer 0 (2) at Term 1] peer 2 accept append 
+254: [peer 1 (0) at Term 1] Previogindex 0 Previogierm 0 , my loglen 1  
+254: [peer 1 (0) at Term 1] accept the log index 1, peer have commit 1
+255: [peer 0 (2) at Term 1] peer 1 accept append 
+255: [peer 0 (2) at Term 1] Commited 1
+254: [peer 2 (0) at Term 1] Previogindex 0 Previogierm 0 , my loglen 1  
+254: [peer 2 (0) at Term 1] accept the log index 1, peer have commit 1
+256: [peer 0 (2) at Term 1] peer 2 accept append 
+267: [peer 0 (2) at Term 1] a new log to leader 2
+285: [peer 1 (0) at Term 1] Previogindex 0 Previogierm 0 , my loglen 1  
+285: [peer 1 (0) at Term 1] accept the log index 2, peer have commit 1
+286: [peer 0 (2) at Term 1] peer 1 accept append 
+286: [peer 0 (2) at Term 1] Commited 2
+285: [peer 2 (0) at Term 1] Previogindex 0 Previogierm 0 , my loglen 1  
+285: [peer 2 (0) at Term 1] accept the log index 2, peer have commit 1
+287: [peer 0 (2) at Term 1] peer 2 accept append 
+316: [peer 2 (0) at Term 1] Previogindex 1 Previogierm 1 , my loglen 2  
+316: [peer 2 (0) at Term 1] accept yizhixing 
+316: [peer 2 (0) at Term 1] accept the log now index 2, peer have commit 2
+317: [peer 0 (2) at Term 1] peer 2 accept append 
+317: [peer 0 (2) at Term 1] Commited 2
+317: [peer 1 (0) at Term 1] Previogindex 1 Previogierm 1 , my loglen 2  
+317: [peer 1 (0) at Term 1] accept yizhixing 
+317: [peer 1 (0) at Term 1] accept the log now index 2, peer have commit 2
+319: [peer 0 (2) at Term 1] peer 1 accept append 
+330: [peer 0 (2) at Term 1] a new log to leader 3
+347: [peer 1 (0) at Term 1] Previogindex 0 Previogierm 0 , my loglen 2  
+347: [peer 1 (0) at Term 1] log  false, I want 3 but accept a log after Previogindex 0
+348: [peer 0 (2) at Term 1] peer 1 refused ,which want 3
+348: [peer 2 (0) at Term 1] Previogindex 0 Previogierm 0 , my loglen 2  
+348: [peer 2 (0) at Term 1] log  false, I want 3 but accept a log after Previogindex 0
+349: [peer 0 (2) at Term 1] peer 2 refused ,which want 3
+378: [peer 2 (0) at Term 1] Previogindex 2 Previogierm 1 , my loglen 2  
+378: [peer 2 (0) at Term 1] accept yizhixing 
+378: [peer 2 (0) at Term 1] accept the log now index 3, peer have commit 2
+380: [peer 0 (2) at Term 1] peer 2 accept append 
+380: [peer 0 (2) at Term 1] Commited 3
+380: [peer 1 (0) at Term 1] Previogindex 2 Previogierm 1 , my loglen 2  
+380: [peer 1 (0) at Term 1] accept yizhixing 
+380: [peer 1 (0) at Term 1] accept the log now index 3, peer have commit 2
+381: [peer 0 (2) at Term 1] peer 1 accept append 
+409: [peer 2 (0) at Term 1] Previogindex 0 Previogierm 0 , my loglen 3  
+409: [peer 2 (0) at Term 1] log  false, I want 3 but accept a log after Previogindex 0
+410: [peer 0 (2) at Term 1] peer 2 refused ,which want 3
+411: [peer 1 (0) at Term 1] Previogindex 0 Previogierm 0 , my loglen 3  
+411: [peer 1 (0) at Term 1] log  false, I want 3 but accept a log after Previogindex 0
+412: [peer 0 (2) at Term 1] peer 1 refused ,which want 3
+672: [peer 2 (0) at Term 1] start election
+729: [peer 1 (0) at Term 1] start election
+731: [peer 1 (1) at Term 2] recieve a vote which come from 2
+1001: [peer 2 (1) at Term 2] start election
+1002: [peer 1 (1) at Term 2] start election
+1003: [peer 0 (2) at Term 1] recieve a vote which come from 2
+1003: [peer 1 (1) at Term 3] recieve a vote which come from 2
+1378: [peer 2 (1) at Term 3] recieve a vote which come from 1
+1378: [peer 2 (1) at Term 3] start election
+1380: [peer 1 (1) at Term 3] start election
+1389: [peer 2 (1) at Term 4] recieve a vote which come from 1
+1389: [peer 1 (1) at Term 4] recieve a vote which come from 2
+1390: [peer 1 (1) at Term 4] accept a lower keep-alive! from 0
+1391: [peer 2 (1) at Term 4] accept a lower keep-alive! from 0
+1392: [peer 0 (0) at Term 4] start election
+1392: [peer 0 (1) at Term 5] recieve a vote which come from 1
+1392: [peer 1 (1) at Term 4] receive a higher request 5
+1393: [peer 0 (1) at Term 5] recieve a vote which come from 1
+1393: [peer 0 (1) at Term 5] recieve a vote which come from 2
+1392: [peer 2 (1) at Term 4] receive a higher request 5
+1394: [peer 0 (1) at Term 5] recieve a vote which come from 1
+1394: [peer 1 (0) at Term 5] recieve a vote which come from 0
+1395: [peer 0 (1) at Term 5] recieve a vote which come from 2
+1395: [peer 2 (0) at Term 5] recieve a vote which come from 1
+1395: [peer 2 (0) at Term 5] recieve a vote which come from 0
+1628: [peer 2 (0) at Term 5] start election
+1630: [peer 0 (1) at Term 5] recieve a vote which come from 2
+1629: [peer 1 (0) at Term 5] recieve a vote which come from 2
+1642: [peer 0 (0) at Term 6] start election
+1642: [peer 1 (0) at Term 6] recieve a vote which come from 0
+1642: [peer 2 (1) at Term 6] recieve a vote which come from 0
+1661: [peer 1 (0) at Term 7] start election
+1662: [peer 0 (1) at Term 7] recieve a vote which come from 1
+1662: [peer 2 (0) at Term 7] recieve a vote which come from 1
+1910: [peer 1 (1) at Term 8] start election
+1910: [peer 2 (0) at Term 8] recieve a vote which come from 1
+1911: [peer 0 (0) at Term 8] recieve a vote which come from 1
+1969: [peer 2 (0) at Term 9] start election
+1970: [peer 0 (0) at Term 9] recieve a vote which come from 2
+1971: [peer 1 (1) at Term 9] recieve a vote which come from 2
+1987: [peer 0 (0) at Term 10] start election
+1987: [peer 1 (0) at Term 10] recieve a vote which come from 0
+1987: [peer 2 (1) at Term 10] recieve a vote which come from 0
+2187: [peer 2 (0) at Term 11] start election
+2188: [peer 0 (1) at Term 11] recieve a vote which come from 2
+2188: [peer 1 (0) at Term 11] recieve a vote which come from 2
+2219: [peer 1 (0) at Term 12] start election
+2219: [peer 2 (1) at Term 12] recieve a vote which come from 1
+2220: [peer 0 (0) at Term 12] recieve a vote which come from 1
+2236: [peer 0 (0) at Term 13] start election
+2236: [peer 1 (1) at Term 13] recieve a vote which come from 0
+2236: [peer 2 (0) at Term 13] recieve a vote which come from 0
+2345: [peer 0 (1) at Term 14] I AM DEAD
+2345: [peer 1 (0) at Term 14] I AM DEAD
+2344: [peer 2 (0) at Term 14] I AM DEAD
+--- FAIL: TestBasicAgree2B (2.35s)
+    config.go:602: one(300) failed to reach agreement
+FAIL
+exit status 1
+FAIL	6.824/raft	2.356s
