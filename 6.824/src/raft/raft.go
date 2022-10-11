@@ -18,6 +18,8 @@ package raft
 //
 
 import (
+	"bytes"
+	"6.824/labgob"
 
 	//"debug/elf"
 	"fmt"
@@ -135,12 +137,13 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	rf.timeBegin=time.Now()
 
 	//--------------------------------------------------------start work
+	//回复crash前的日志
 	rf.readPersist(persister.ReadRaftState())
 	//rf.Log("Start")
 	// start ticker goroutine to start elections
 	go rf.ticker()
-	//开始工作，用来接受log
-	go rf.Worker()
+	//开始工作，用来将提交的log写进状态机
+	go rf.Applier()
 
 	return rf
 }
@@ -240,7 +243,37 @@ func (rf *Raft) ticker() {
 	}
 }
 
-func (rf* Raft) Worker()  {
+func (rf* Raft) Applier()  {
+
+	for rf.killed()==false {
+
+		time.Sleep(35*time.Millisecond)
+
+		rf.mu.Lock()
+
+		if len(rf.Logs)==0||rf.LastApplied>=rf.Commitindex  {
+			rf.mu.Unlock()
+			continue
+		}
+
+		appendlog:=make([]ApplyMsg,0)
+
+		for rf.LastApplied < rf.Commitindex {
+				rf.LastApplied += 1
+				appendlog = append(appendlog, ApplyMsg{
+					CommandValid:  true,
+					SnapshotValid: false,
+					CommandIndex:  rf.LastApplied,
+					Command:       rf.Logs[rf.LastApplied-1].Command,
+				})
+		}
+
+		rf.mu.Unlock()
+
+		for _,applog := range appendlog{
+			rf.applyCh<-applog
+		}
+	}
 
 }
 
@@ -343,9 +376,10 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 
 	ok := rf.peers[server].Call("Raft.RequestVote", args, reply)
 	for !ok{
-		if rf.killed()==true||rf.statue!=candidate{
+		if rf.killed()==true{
 			return false
 		}
+		rf.Log("faile send request vote to %v ",server)
 		ok = rf.peers[server].Call("Raft.RequestVote", args, reply)
 	}
 
@@ -356,7 +390,7 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 	//对于leader而言，如果reply的term》leader，说明leader已经过期了
 	case leader:
 		if reply.Term>rf.term{
-			rf.Log("receive a higher request %v",reply.Term)
+			rf.Log("receive a higher reply %v",reply.Term)
 			rf.statue=follower
 			rf.Updateterm(reply.Term)
 			return reply.Vote
@@ -365,7 +399,7 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 		//如果reply的任期比我还高，那么candidate转为follower，停止投票
 		if reply.Term>rf.term{
 
-			rf.Log("receive a higher request %v",reply.Term)
+			rf.Log("receive a higher reply %v",reply.Term)
 			rf.statue=follower
 			//如果收到比我任期还大的，不用重设超时时间
 			rf.Updateterm(reply.Term)
@@ -374,7 +408,7 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 		if reply.Vote {
 
 			rf.tstatue.Votenum+=1
-			if rf.tstatue.Votenum>=(rf.cluster/2+1){
+			if rf.tstatue.Votenum>=(len(rf.peers)/2+1){
 
 				rf.tstatue.Votenum=0   //防止多次唤醒
 				rf.Log("Become leader!!!!")
@@ -430,14 +464,15 @@ func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *Appe
 		args.Previogindex=rf.NextIndex[server]-1
 	}
 	if args.Previogindex>0{
-
+		//会不会
 		args.Previogierm=rf.Logs[args.Previogindex-1].Term
 	}
 	ok := rf.peers[server].Call("Raft.RequestApp", args, reply)
 	for !ok{
-		if rf.killed()||rf.statue!=leader {
+		if rf.killed(){
 			return false
 		}
+		rf.Log("fail send append to %v",server)
 		ok=rf.peers[server].Call("Raft.RequestApp", args, reply)
 	}
 	//对于leader而言，如果reply的term》leader，说明leader已经过期了
@@ -462,7 +497,9 @@ func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *Appe
 			if len(rf.Logs)==0{
 				return true
 			}
-			for rf.LastApplied<len(rf.Logs) {
+			rf.Commitindex=len(rf.Logs)
+			//对于leader而言，只要通过半数就可提交了
+			/*for rf.LastApplied<len(rf.Logs) {
 				rf.LastApplied++
 				apply:=ApplyMsg{
 					CommandValid: true,
@@ -471,7 +508,7 @@ func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *Appe
 				}
 				rf.applyCh<-apply
 				rf.Commitindex=rf.LastApplied
-			}
+			}*/
 			rf.Log("Commited %v",rf.Commitindex)
 		}
 	}else {
@@ -558,7 +595,7 @@ func (rf *Raft) RequestApp(args *AppendEntriesArgs, reply *AppendEntriesReply)  
 			}
 
 			rf.Commitindex=Min(len(rf.Logs),args.Ladercommit)
-			for rf.LastApplied<rf.Commitindex {
+			/*for rf.LastApplied<rf.Commitindex {
 
 				rf.LastApplied++
 				apply:=ApplyMsg{
@@ -567,8 +604,8 @@ func (rf *Raft) RequestApp(args *AppendEntriesArgs, reply *AppendEntriesReply)  
 					Command: rf.Logs[rf.LastApplied-1].Command,
 				}
 				rf.applyCh<-apply
-			}
-			rf.Log("accept the log index %v, peer have commit %v",len(rf.Logs),rf.Commitindex)
+			}*/
+			rf.Log("accept the log now index %v, peer have commit %v",len(rf.Logs),rf.Commitindex)
 			reply.Success=true
 		} else {
 
@@ -622,6 +659,13 @@ func (rf *Raft) persist() {
 	// e.Encode(rf.yyy)
 	// data := w.Bytes()
 	// rf.persister.SaveRaftState(data)
+	w := new(bytes.Buffer)
+	e := labgob.NewEncoder(w)
+	e.Encode(rf.term)
+	e.Encode(rf.Logs)
+	data := w.Bytes()
+	rf.persister.SaveRaftState(data)
+
 }
 
 
@@ -634,17 +678,24 @@ func (rf *Raft) readPersist(data []byte) {
 	}
 	// Your code here (2C).
 	// Example:
-	// r := bytes.NewBuffer(data)
-	// d := labgob.NewDecoder(r)
-	// var xxx
-	// var yyy
-	// if d.Decode(&xxx) != nil ||
-	//    d.Decode(&yyy) != nil {
-	//   error...
-	// } else {
-	//   rf.xxx = xxx
-	//   rf.yyy = yyy
-	// }
+	r := bytes.NewBuffer(data)
+	d := labgob.NewDecoder(r)
+	var currentTerm int
+	var logs []Entry
+	//var lastIncludeIndex int
+	//var lastIncludeTerm int
+	if d.Decode(&currentTerm) != nil ||
+		d.Decode(&logs) != nil {
+		//d.Decode(&lastIncludeIndex) != nil ||
+		//d.Decode(&lastIncludeTerm) != nil
+		rf.Log("Decode error")
+	} else {
+		rf.term = currentTerm
+		rf.Logs = logs
+		//rf.lastIncludeIndex = lastIncludeIndex
+		//rf.lastIncludeTerm = lastIncludeTerm
+	}
+
 }
 
 
