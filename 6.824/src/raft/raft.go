@@ -379,7 +379,7 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 		if rf.killed()==true{
 			return false
 		}
-		rf.Log("faile send request vote to %v ",server)
+		//rf.Log("faile send request vote to %v ",server)
 		ok = rf.peers[server].Call("Raft.RequestVote", args, reply)
 	}
 
@@ -472,7 +472,7 @@ func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *Appe
 		if rf.killed(){
 			return false
 		}
-		rf.Log("fail send append to %v",server)
+		//rf.Log("fail send append to %v",server)
 		ok=rf.peers[server].Call("Raft.RequestApp", args, reply)
 	}
 	//对于leader而言，如果reply的term》leader，说明leader已经过期了
@@ -749,9 +749,11 @@ func (rf *Raft) killed() bool {
 // Make() must return quickly, so it should start goroutines
 // for any long-running work.
 //
+
 const RaftPrint = true
 //运行时间 peer id号 （状态：0-follower 1-candidate 2-leader） 任期
 func(rf *Raft) Log(format string,a ...interface{}) {
+
 	if RaftPrint {
 		format = "%v: [peer %v (%v) at Term %v] " + format + "\n"
 		a = append([]interface{}{time.Now().Sub(rf.timeBegin).Milliseconds(), rf.me, rf.statue, rf.term}, a...)
