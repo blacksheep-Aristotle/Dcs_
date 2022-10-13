@@ -565,7 +565,7 @@ func (rf *Raft) RequestApp(args *AppendEntriesArgs, reply *AppendEntriesReply)  
 				}
 				reply.Success=true
 				reply.Term=rf.term
-
+				/*
 				rf.Commitindex=Min(len(rf.Logs),args.Ladercommit)
 				for rf.LastApplied<rf.Commitindex {
 					rf.LastApplied++
@@ -575,9 +575,8 @@ func (rf *Raft) RequestApp(args *AppendEntriesArgs, reply *AppendEntriesReply)  
 						Command: rf.Logs[rf.LastApplied-1].Command,
 					}
 					rf.applyCh<-apply
-				}
+				}*/
 				rf.Log("accept the log now len %v, peer have commit %v",len(rf.Logs),rf.Commitindex)
-				reply.Success=true
 				return
 			}
 		}
