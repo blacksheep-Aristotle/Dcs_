@@ -20,6 +20,7 @@ package raft
 import (
 	"bytes"
 	"6.824/labgob"
+	"net/rpc"
 
 	//"debug/elf"
 	"fmt"
@@ -78,8 +79,8 @@ type Raft struct {
 
 	Commitindex  int//已知被提交的最高日志条目的索引（初始化为0，单调增加）
 	LastApplied  int //已提交的最高日志索引（初始化为0，单调增加）
-	NextIndex[] int //对于每个服务器，要发送给该服务器的下一个日志条目的索引（初始化为领导者的最后一个日志索引+1）
-	matchIndex[] int //对于每个服务器，已知在服务器上复制的最高日志条目的索引（初始化为0，单调增加）
+	NextIndex[] int //对于每个服务器，要发送给该服务器的下一个日志条目的索引（初始化为领导者的最后一个日志索引+1），用于性能
+	matchIndex[] int //对于每个服务器，已知在服务器上复制的最高日志条目的索引（初始化为0，单调增加）,用于安全
 	applyCh   chan ApplyMsg
 	applyCond *sync.Cond
 	Logs []Entry
@@ -413,7 +414,10 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 				rf.tstatue.Votenum=0   //防止多次唤醒
 				rf.Log("Become leader!!!!")
 				rf.statue=leader
+				//新leader的next下标应该是最大值，否则从0开始发送，网络负担太大
+				//rf.NextIndex=make([]int,len(rf.peers))
 				rf.Keepalive()
+
 				//向所有节点发送keep-alive
 				return reply.Vote
 			}
@@ -439,20 +443,31 @@ func (rf* Raft) Keepalive()  {
 				Entries: nil,
 				Ladercommit: rf.Commitindex,
 			}
+
 			//将节点缺失的日志一次性全发出去！！！而不是等到服务端一次次回滚
 			//如果nextIndex[i]长度不等于rf.logs,代表与leader的log entries不一致，需要附带过去
+			/*if len(rf.Logs)>= rf.NextIndex[i] {
+				entries := make([]Entry, 0)
+				entries = append(entries, rf.Logs[rf.NextIndex[i]-1:]...)
+				args.Entries = entries
+			}*/
+
 			if len(rf.Logs)!=0 {
 				if rf.NextIndex[i]==0 {
 					args.Entries=rf.Logs[0:]
-				}else {
-					args.Entries=rf.Logs[rf.NextIndex[i]:]
+				}else if len(rf.Logs)>=rf.NextIndex[i]{
+
+					args.Entries=rf.Logs[rf.NextIndex[i]-1:]
 				}
 			}
 
 			//说明不是第一次发送
 			if rf.NextIndex[i]>0{
 
-				args.Previogindex=rf.NextIndex[i]
+				args.Previogindex=rf.NextIndex[i]-1
+				if args.Previogindex>=len(rf.Logs)+1 {
+					args.Previogindex=len(rf.Logs)
+				}
 			}
 			if args.Previogindex>0{
 
@@ -490,8 +505,8 @@ func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *Appe
 	}
 	if reply.Success{
 		//这里有bug，如果是keeepalive，那么args.Entries=0,所以应该是+而不是=
-		rf.NextIndex[server]+=len(args.Entries)  //可能会一次提交多条日志
-
+		rf.matchIndex[server]=args.Previogindex+len(args.Entries)  //可能会一次提交多条日志
+		rf.NextIndex[server] = rf.matchIndex[server] + 1
 		rf.Log("peer %v accept append which waht %v",server,rf.NextIndex[server])
 		*num+=1
 		if *num>=len(rf.peers)/2+1{
