@@ -20,7 +20,7 @@ package raft
 import (
 	"bytes"
 	"6.824/labgob"
-	"net/rpc"
+
 
 	//"debug/elf"
 	"fmt"
@@ -229,12 +229,15 @@ func (rf *Raft) ticker() {
 			rf.Keepalive()  //keep-alive如果有新加的条目，就一次性发送
 			//如果现在的时间超出选举时间，说明超时了，开始选举
 		}else if time.Now().After(rf.electiontime) {
-			rf.Log("start election")
+
 			rf.statue=candidate
 			rf.Updateterm(rf.term+1)
 			rf.tstatue.Votenum+=1
 			rf.tstatue.Isvote=true
 			rf.Upelection()
+
+			rf.Log("start election")
+
 			rf.Leaderelection()
 		}
 
@@ -340,6 +343,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	if args.Term>rf.term{
 		rf.statue=follower
 		rf.Updateterm(args.Term)
+		rf.Log("a higher vote,Become follower")
 	}
 	if rf.statue==follower{
 		if args.Term>=rf.term {
@@ -350,16 +354,20 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 			}
 			//否则要进行一致性检验
 			if args.Lastlogterm<rf.Logs[len(rf.Logs)-1].Term{
-				rf.Log("Vote false on yizhixing come from %v his loglastterm %v",args.Candidate,args.Lastlogterm)
+				rf.Log("Vote false on LastTerm who come from %v his loglastterm %v",args.Candidate,args.Lastlogterm)
 				reply.Vote=false
 				reply.Term=rf.term
 				return
 			}else if args.Lastlogterm==rf.Logs[len(rf.Logs)-1].Term {
 				if args.Lastlogindex<len(rf.Logs){
-					rf.Log("Vote false on yizhixing come from %v his Lastlogindex %v",args.Candidate,args.Lastlogindex)
+					rf.Log("Vote false on LastIndex who come from %v his Lastlogindex %v",args.Candidate,args.Lastlogindex)
 					reply.Vote=false
 					reply.Term=rf.term
 					return
+				}else {
+					rf.Log("Vote pass yizhixing")
+					reply.Term=rf.term
+					Vote(rf,args,reply)
 				}
 			}else {
 				rf.Log("Vote pass yizhixing")
@@ -391,7 +399,7 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 	//对于leader而言，如果reply的term》leader，说明leader已经过期了
 	case leader:
 		if reply.Term>rf.term{
-			rf.Log("receive a higher reply %v",reply.Term)
+			rf.Log("receive a higher reply %v , become follower",reply.Term)
 			rf.statue=follower
 			rf.Updateterm(reply.Term)
 			return reply.Vote
@@ -400,7 +408,7 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 		//如果reply的任期比我还高，那么candidate转为follower，停止投票
 		if reply.Term>rf.term{
 
-			rf.Log("receive a higher reply %v",reply.Term)
+			rf.Log("receive a higher reply %v , become follower",reply.Term)
 			rf.statue=follower
 			//如果收到比我任期还大的，不用重设超时时间
 			rf.Updateterm(reply.Term)
@@ -498,6 +506,7 @@ func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *Appe
 	if reply.Term>rf.term{
 		rf.statue=follower
 		rf.Updateterm(reply.Term)
+		rf.Log("become follower")
 		return reply.Success
 	}
 	if rf.statue!=leader{
@@ -545,6 +554,7 @@ func (rf *Raft) RequestApp(args *AppendEntriesArgs, reply *AppendEntriesReply)  
 	if args.Term>rf.term{
 		rf.Updateterm(args.Term)
 		rf.statue=follower
+		rf.Log("become follower")
 	}
 	if rf.statue==leader{
 		reply.Success=false
