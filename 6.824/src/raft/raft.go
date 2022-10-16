@@ -113,6 +113,8 @@ const (
 func Make(peers []*labrpc.ClientEnd, me int,
 	persister *Persister, applyCh chan ApplyMsg) *Raft {
 	rf := &Raft{}
+	rf.mu.Lock()
+
 	rf.peers = peers
 	rf.persister = persister
 	rf.me = me
@@ -138,8 +140,11 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	rf.timeBegin=time.Now()
 
 	//--------------------------------------------------------start work
-	//回复crash前的日志
+	//回复crash前的日志,忘记加锁，bug+1
+
 	rf.readPersist(persister.ReadRaftState())
+
+	rf.mu.Unlock()
 	//rf.Log("Start")
 	// start ticker goroutine to start elections
 	go rf.ticker()
@@ -272,6 +277,8 @@ func (rf* Raft) Applier()  {
 				})
 		}
 
+		rf.persist()
+
 		rf.mu.Unlock()
 
 		for _,applog := range appendlog{
@@ -384,13 +391,16 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *RequestVoteReply) bool {
 
 	ok := rf.peers[server].Call("Raft.RequestVote", args, reply)
-	for !ok{
+	if ok==false||rf.killed() {
+		return false
+	}
+	/*for !ok{
 		if rf.killed()==true{
 			return false
 		}
 		//rf.Log("faile send request vote to %v ",server)
 		ok = rf.peers[server].Call("Raft.RequestVote", args, reply)
-	}
+	}*/
 
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
@@ -440,7 +450,7 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 
 //leader维持心跳
 func (rf* Raft) Keepalive()  {
-	num:=1
+	var num=1
 	for i:=0;i< len(rf.peers);i++{
 		if i!=rf.me{
 			args:=AppendEntriesArgs{
@@ -492,13 +502,16 @@ func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *Appe
 
 
 	ok := rf.peers[server].Call("Raft.RequestApp", args, reply)
-	for !ok{
+	if ok==false||rf.killed() {
+		return false
+	}
+	/*for !ok{
 		if rf.killed(){
 			return false
 		}
 		//rf.Log("fail send append to %v",server)
 		ok=rf.peers[server].Call("Raft.RequestApp", args, reply)
-	}
+	}*/
 	//对于leader而言，如果reply的term》leader，说明leader已经过期了
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
@@ -506,7 +519,7 @@ func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *Appe
 	if reply.Term>rf.term{
 		rf.statue=follower
 		rf.Updateterm(reply.Term)
-		rf.Log("become follower")
+		rf.Log("Higher append reply , become follower")
 		return reply.Success
 	}
 	if rf.statue!=leader{
@@ -517,8 +530,8 @@ func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *Appe
 		rf.matchIndex[server]=args.Previogindex+len(args.Entries)  //可能会一次提交多条日志
 		rf.NextIndex[server] = rf.matchIndex[server] + 1
 		rf.Log("peer %v accept append which waht %v",server,rf.NextIndex[server])
-		*num+=1
-		if *num>=len(rf.peers)/2+1{
+		*num++
+		if *num >= len(rf.peers)/2+1{
 			*num=0  //保证不会提交两次！！
 			if len(rf.Logs)==0{
 				return true
@@ -551,10 +564,11 @@ func (rf *Raft) RequestApp(args *AppendEntriesArgs, reply *AppendEntriesReply)  
 
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
+
 	if args.Term>rf.term{
 		rf.Updateterm(args.Term)
 		rf.statue=follower
-		rf.Log("become follower")
+		rf.Log("Higher append , become follower")
 	}
 	if rf.statue==leader{
 		reply.Success=false
@@ -662,6 +676,8 @@ func (rf *Raft) persist() {
 	e := labgob.NewEncoder(w)
 	e.Encode(rf.term)
 	e.Encode(rf.Logs)
+	e.Encode(rf.Commitindex)
+	e.Encode(rf.LastApplied)
 	data := w.Bytes()
 	rf.persister.SaveRaftState(data)
 
@@ -680,17 +696,21 @@ func (rf *Raft) readPersist(data []byte) {
 	r := bytes.NewBuffer(data)
 	d := labgob.NewDecoder(r)
 	var currentTerm int
+	var comidx int
+	var appidx int
 	var logs []Entry
 	//var lastIncludeIndex int
 	//var lastIncludeTerm int
 	if d.Decode(&currentTerm) != nil ||
-		d.Decode(&logs) != nil {
-		//d.Decode(&lastIncludeIndex) != nil ||
-		//d.Decode(&lastIncludeTerm) != nil
+		d.Decode(&logs) != nil ||
+		d.Decode(&comidx) != nil ||
+		d.Decode(&appidx) != nil{
 		rf.Log("Decode error")
 	} else {
 		rf.term = currentTerm
 		rf.Logs = logs
+		rf.Commitindex=comidx
+		rf.LastApplied=appidx
 		//rf.lastIncludeIndex = lastIncludeIndex
 		//rf.lastIncludeTerm = lastIncludeTerm
 	}
