@@ -113,7 +113,7 @@ const (
 func Make(peers []*labrpc.ClientEnd, me int,
 	persister *Persister, applyCh chan ApplyMsg) *Raft {
 	rf := &Raft{}
-	rf.mu.Lock()
+	//rf.mu.Lock()
 
 	rf.peers = peers
 	rf.persister = persister
@@ -144,7 +144,7 @@ func Make(peers []*labrpc.ClientEnd, me int,
 
 	rf.readPersist(persister.ReadRaftState())
 
-	rf.mu.Unlock()
+	//rf.mu.Unlock()
 	//rf.Log("Start")
 	// start ticker goroutine to start elections
 	go rf.ticker()
@@ -277,7 +277,7 @@ func (rf* Raft) Applier()  {
 				})
 		}
 
-		rf.persist()
+		//rf.persist()
 
 		rf.mu.Unlock()
 
@@ -646,7 +646,7 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 		index := len(rf.Logs) + 1
 		term := rf.term
 		rf.Logs = append(rf.Logs, Entry{Term: term, Command: command})
-		rf.persist()
+		//rf.persist()
 
 		rf.Log("a new log to leader , now leader log len %v",index)
 		return index, term, true
