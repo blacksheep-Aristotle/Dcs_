@@ -1,0 +1,905 @@
+warning: only one CPU, which may conceal locking bugs
+Test (2C): Figure 8 (unreliable) ...
+183: [peer 4 (1) at Term 1] start election
+188: [peer 3 (0) at Term 0] recieve a vote which come from 4
+188: [peer 3 (0) at Term 1] a higher vote,Become follower
+188: [peer 3 (0) at Term 1] vote to 4
+201: [peer 2 (0) at Term 0] recieve a vote which come from 4
+201: [peer 2 (0) at Term 1] a higher vote,Become follower
+201: [peer 2 (0) at Term 1] vote to 4
+201: [peer 4 (2) at Term 1] Become leader!!!! leader loglen 0 , leader commit 0
+203: [peer 4 (2) at Term 1] a new log to leader , now leader log len 1
+211: [peer 0 (0) at Term 0] recieve a vote which come from 4
+211: [peer 0 (0) at Term 1] a higher vote,Become follower
+211: [peer 0 (0) at Term 1] vote to 4
+211: [peer 3 (0) at Term 1] accept the log now len 0, peer have commit 0
+211: [peer 4 (2) at Term 1] peer 3 accept append which waht 1
+215: [peer 1 (0) at Term 1] Higher append , become follower
+215: [peer 1 (0) at Term 1] accept the log now len 0, peer have commit 0
+214: [peer 4 (2) at Term 1] peer 1 accept append which waht 1
+214: [peer 4 (2) at Term 1] Leader Commited 0
+217: [peer 0 (0) at Term 1] accept the log now len 0, peer have commit 0
+216: [peer 4 (2) at Term 1] peer 0 accept append which waht 1
+224: [peer 2 (0) at Term 1] accept the log now len 0, peer have commit 0
+224: [peer 4 (2) at Term 1] peer 2 accept append which waht 1
+233: [peer 2 (0) at Term 1] accept the log now len 1, peer have commit 0
+233: [peer 4 (2) at Term 1] peer 2 accept append which waht 2
+247: [peer 3 (0) at Term 1] accept the log now len 1, peer have commit 0
+247: [peer 4 (2) at Term 1] peer 3 accept append which waht 2
+247: [peer 4 (2) at Term 1] Leader Commited 1
+256: [peer 0 (0) at Term 1] accept the log now len 1, peer have commit 0
+254: [peer 4 (2) at Term 1] peer 0 accept append which waht 2
+260: [peer 1 (0) at Term 1] accept the log now len 1, peer have commit 0
+259: [peer 4 (2) at Term 1] peer 1 accept append which waht 2
+266: [peer 4 (2) at Term 1] a new log to leader , now leader log len 2
+268: [peer 4 (2) at Term 1] a new log to leader , now leader log len 3
+276: [peer 4 (2) at Term 1] a new log to leader , now leader log len 4
+288: [peer 4 (2) at Term 1] a new log to leader , now leader log len 5
+299: [peer 4 (2) at Term 1] a new log to leader , now leader log len 6
+506: [peer 3 (1) at Term 2] start election
+508: [peer 0 (1) at Term 2] start election
+514: [peer 1 (0) at Term 1] recieve a vote which come from 3
+514: [peer 1 (0) at Term 2] a higher vote,Become follower
+514: [peer 1 (0) at Term 2] Vote pass yizhixing
+514: [peer 1 (0) at Term 2] vote to 3
+520: [peer 2 (0) at Term 1] recieve a vote which come from 0
+520: [peer 2 (0) at Term 2] a higher vote,Become follower
+520: [peer 2 (0) at Term 2] Vote pass yizhixing
+520: [peer 2 (0) at Term 2] vote to 0
+522: [peer 0 (1) at Term 2] recieve a vote which come from 3
+532: [peer 1 (0) at Term 2] recieve a vote which come from 0
+532: [peer 1 (0) at Term 2] Vote pass yizhixing
+535: [peer 3 (1) at Term 2] recieve a vote which come from 0
+753: [peer 4 (2) at Term 1] a new log to leader , now leader log len 7
+755: [peer 4 (2) at Term 1] a new log to leader , now leader log len 8
+757: [peer 4 (2) at Term 1] a new log to leader , now leader log len 9
+765: [peer 4 (2) at Term 1] a new log to leader , now leader log len 10
+784: [peer 2 (1) at Term 3] start election
+785: [peer 3 (1) at Term 3] start election
+791: [peer 0 (1) at Term 2] recieve a vote which come from 2
+791: [peer 0 (0) at Term 3] a higher vote,Become follower
+791: [peer 0 (0) at Term 3] Vote pass yizhixing
+791: [peer 0 (0) at Term 3] vote to 2
+795: [peer 3 (1) at Term 3] recieve a vote which come from 2
+798: [peer 1 (0) at Term 2] recieve a vote which come from 2
+798: [peer 1 (0) at Term 3] a higher vote,Become follower
+798: [peer 1 (0) at Term 3] Vote pass yizhixing
+798: [peer 1 (0) at Term 3] vote to 2
+798: [peer 2 (2) at Term 3] Become leader!!!! leader loglen 1 , leader commit 0
+800: [peer 2 (2) at Term 3] recieve a vote which come from 3
+806: [peer 1 (0) at Term 3] recieve a vote which come from 3
+806: [peer 1 (0) at Term 3] Vote pass yizhixing
+807: [peer 0 (0) at Term 3] recieve a vote which come from 3
+807: [peer 0 (0) at Term 3] Vote pass yizhixing
+807: [peer 1 (0) at Term 3] accept the log now len 1, peer have commit 0
+807: [peer 2 (2) at Term 3] peer 1 accept append which waht 2
+819: [peer 3 (1) at Term 3] accept the log now len 1, peer have commit 0
+820: [peer 2 (2) at Term 3] peer 3 accept append which waht 2
+820: [peer 2 (2) at Term 3] Leader Commited 1
+827: [peer 0 (0) at Term 3] accept the log now len 1, peer have commit 0
+826: [peer 2 (2) at Term 3] peer 0 accept append which waht 2
+849: [peer 0 (0) at Term 3] miss the first, my loglen 1 , Preidx 1 ,Preterm 1
+848: [peer 2 (2) at Term 3] peer 0 refused ,which want 0
+848: [peer 3 (1) at Term 3] miss the first, my loglen 1 , Preidx 1 ,Preterm 1
+849: [peer 2 (2) at Term 3] peer 3 refused ,which want 0
+852: [peer 1 (0) at Term 3] miss the first, my loglen 1 , Preidx 1 ,Preterm 1
+852: [peer 2 (2) at Term 3] peer 1 refused ,which want 0
+883: [peer 3 (1) at Term 3] accept the log now len 1, peer have commit 1
+884: [peer 2 (2) at Term 3] peer 3 accept append which waht 2
+891: [peer 1 (0) at Term 3] accept the log now len 1, peer have commit 1
+891: [peer 2 (2) at Term 3] peer 1 accept append which waht 2
+891: [peer 2 (2) at Term 3] Leader Commited 1
+903: [peer 0 (0) at Term 3] accept the log now len 1, peer have commit 1
+902: [peer 2 (2) at Term 3] peer 0 accept append which waht 2
+925: [peer 2 (2) at Term 3] a new log to leader , now leader log len 2
+925: [peer 4 (2) at Term 1] a new log to leader , now leader log len 11
+936: [peer 2 (2) at Term 3] a new log to leader , now leader log len 3
+936: [peer 4 (2) at Term 1] a new log to leader , now leader log len 12
+939: [peer 0 (0) at Term 3] accept the log now index 1, peer have commit 1
+945: [peer 2 (2) at Term 3] a new log to leader , now leader log len 4
+945: [peer 4 (2) at Term 1] a new log to leader , now leader log len 13
+946: [peer 3 (1) at Term 3] accept the log now index 1, peer have commit 1
+954: [peer 2 (2) at Term 3] a new log to leader , now leader log len 5
+954: [peer 4 (2) at Term 1] a new log to leader , now leader log len 14
+956: [peer 2 (2) at Term 3] a new log to leader , now leader log len 6
+956: [peer 4 (2) at Term 1] a new log to leader , now leader log len 15
+1111: [peer 1 (1) at Term 4] start election
+1114: [peer 2 (2) at Term 3] a new log to leader , now leader log len 7
+1113: [peer 4 (2) at Term 1] a new log to leader , now leader log len 16
+1115: [peer 0 (0) at Term 3] recieve a vote which come from 1
+1115: [peer 0 (0) at Term 4] a higher vote,Become follower
+1115: [peer 0 (0) at Term 4] Vote pass yizhixing
+1115: [peer 0 (0) at Term 4] vote to 1
+1121: [peer 2 (2) at Term 3] a new log to leader , now leader log len 8
+1120: [peer 4 (2) at Term 1] a new log to leader , now leader log len 17
+1125: [peer 2 (2) at Term 3] a new log to leader , now leader log len 9
+1124: [peer 4 (2) at Term 1] a new log to leader , now leader log len 18
+1130: [peer 2 (2) at Term 3] a new log to leader , now leader log len 10
+1129: [peer 4 (2) at Term 1] a new log to leader , now leader log len 19
+1137: [peer 3 (1) at Term 3] recieve a vote which come from 1
+1137: [peer 3 (0) at Term 4] a higher vote,Become follower
+1137: [peer 3 (0) at Term 4] Vote pass yizhixing
+1137: [peer 3 (0) at Term 4] vote to 1
+1139: [peer 1 (2) at Term 4] Become leader!!!! leader loglen 1 , leader commit 1
+1146: [peer 0 (0) at Term 4] log append false, I want 2 but accept a log after Previogindex 0
+1146: [peer 1 (2) at Term 4] peer 0 refused ,which want 2
+1164: [peer 3 (0) at Term 4] log append false, I want 2 but accept a log after Previogindex 0
+1166: [peer 1 (2) at Term 4] peer 3 refused ,which want 2
+1165: [peer 3 (0) at Term 4] log append false, I want 2 but accept a log after Previogindex 0
+1167: [peer 1 (2) at Term 4] peer 3 refused ,which want 2
+1174: [peer 0 (0) at Term 4] accept the log now index 1, peer have commit 1
+1174: [peer 1 (2) at Term 4] peer 0 accept append which waht 2
+1222: [peer 3 (0) at Term 4] accept the log now index 1, peer have commit 1
+1224: [peer 1 (2) at Term 4] peer 3 accept append which waht 2
+1233: [peer 0 (0) at Term 4] accept the log now index 1, peer have commit 1
+1232: [peer 1 (2) at Term 4] peer 0 accept append which waht 2
+1232: [peer 1 (2) at Term 4] Leader Commited 1
+1269: [peer 0 (0) at Term 4] accept the log now index 1, peer have commit 1
+1268: [peer 1 (2) at Term 4] peer 0 accept append which waht 2
+1275: [peer 3 (0) at Term 4] accept the log now index 1, peer have commit 1
+1276: [peer 1 (2) at Term 4] peer 3 accept append which waht 2
+1276: [peer 1 (2) at Term 4] Leader Commited 1
+1307: [peer 0 (0) at Term 4] accept the log now index 1, peer have commit 1
+1307: [peer 1 (2) at Term 4] peer 0 accept append which waht 2
+1316: [peer 3 (0) at Term 4] accept the log now index 1, peer have commit 1
+1317: [peer 1 (2) at Term 4] peer 3 accept append which waht 2
+1317: [peer 1 (2) at Term 4] Leader Commited 1
+1347: [peer 3 (0) at Term 4] accept the log now index 1, peer have commit 1
+1348: [peer 1 (2) at Term 4] peer 3 accept append which waht 2
+1352: [peer 0 (0) at Term 4] accept the log now index 1, peer have commit 1
+1352: [peer 1 (2) at Term 4] peer 0 accept append which waht 2
+1352: [peer 1 (2) at Term 4] Leader Commited 1
+1395: [peer 0 (0) at Term 4] accept the log now index 1, peer have commit 1
+1395: [peer 1 (2) at Term 4] peer 0 accept append which waht 2
+1406: [peer 3 (0) at Term 4] accept the log now index 1, peer have commit 1
+1407: [peer 1 (2) at Term 4] peer 3 accept append which waht 2
+1407: [peer 1 (2) at Term 4] Leader Commited 1
+1440: [peer 0 (0) at Term 4] accept the log now index 1, peer have commit 1
+1439: [peer 3 (0) at Term 4] accept the log now index 1, peer have commit 1
+1440: [peer 1 (2) at Term 4] peer 0 accept append which waht 2
+1440: [peer 1 (2) at Term 4] peer 3 accept append which waht 2
+1440: [peer 1 (2) at Term 4] Leader Commited 1
+1492: [peer 0 (0) at Term 4] accept the log now index 1, peer have commit 1
+1492: [peer 1 (2) at Term 4] peer 0 accept append which waht 2
+1495: [peer 3 (0) at Term 4] accept the log now index 1, peer have commit 1
+1496: [peer 1 (2) at Term 4] peer 3 accept append which waht 2
+1496: [peer 1 (2) at Term 4] Leader Commited 1
+1544: [peer 3 (0) at Term 4] accept the log now index 1, peer have commit 1
+1546: [peer 1 (2) at Term 4] peer 3 accept append which waht 2
+1553: [peer 0 (0) at Term 4] accept the log now index 1, peer have commit 1
+1552: [peer 1 (2) at Term 4] peer 0 accept append which waht 2
+1553: [peer 1 (2) at Term 4] Leader Commited 1
+1584: [peer 1 (2) at Term 4] a new log to leader , now leader log len 2
+1584: [peer 2 (2) at Term 3] a new log to leader , now leader log len 11
+1583: [peer 4 (2) at Term 1] a new log to leader , now leader log len 20
+1590: [peer 3 (0) at Term 4] accept the log now index 1, peer have commit 1
+1591: [peer 1 (2) at Term 4] peer 3 accept append which waht 2
+1592: [peer 1 (2) at Term 4] a new log to leader , now leader log len 3
+1591: [peer 2 (2) at Term 3] a new log to leader , now leader log len 12
+1591: [peer 4 (2) at Term 1] a new log to leader , now leader log len 21
+1596: [peer 1 (2) at Term 4] a new log to leader , now leader log len 4
+1596: [peer 2 (2) at Term 3] a new log to leader , now leader log len 13
+1595: [peer 4 (2) at Term 1] a new log to leader , now leader log len 22
+1601: [peer 0 (0) at Term 4] accept the log now index 1, peer have commit 1
+1600: [peer 1 (2) at Term 4] peer 0 accept append which waht 2
+1600: [peer 1 (2) at Term 4] Leader Commited 1
+1609: [peer 1 (2) at Term 4] a new log to leader , now leader log len 5
+1609: [peer 2 (2) at Term 3] a new log to leader , now leader log len 14
+1608: [peer 4 (2) at Term 1] a new log to leader , now leader log len 23
+1615: [peer 1 (2) at Term 4] a new log to leader , now leader log len 6
+1615: [peer 2 (2) at Term 3] a new log to leader , now leader log len 15
+1614: [peer 4 (2) at Term 1] a new log to leader , now leader log len 24
+1624: [peer 1 (2) at Term 4] a new log to leader , now leader log len 7
+1624: [peer 2 (2) at Term 3] a new log to leader , now leader log len 16
+1623: [peer 4 (2) at Term 1] a new log to leader , now leader log len 25
+1635: [peer 3 (0) at Term 4] accept the log now index 6, peer have commit 1
+1645: [peer 0 (0) at Term 4] accept the log now index 6, peer have commit 1
+1679: [peer 3 (0) at Term 4] accept a lower keep-alive! from 4
+1679: [peer 4 (0) at Term 4] Higher append reply , become follower
+1685: [peer 0 (0) at Term 4] accept a lower keep-alive! from 4
+1690: [peer 1 (2) at Term 4] a new log to leader , now leader log len 8
+1689: [peer 2 (2) at Term 3] a new log to leader , now leader log len 17
+1690: [peer 1 (2) at Term 4] a new log to leader , now leader log len 9
+1690: [peer 2 (2) at Term 3] a new log to leader , now leader log len 18
+1706: [peer 4 (1) at Term 5] start election
+1721: [peer 3 (0) at Term 4] accept the log now index 9, peer have commit 1
+1723: [peer 0 (0) at Term 4] accept the log now index 9, peer have commit 1
+1723: [peer 1 (2) at Term 4] peer 3 accept append which waht 10
+1724: [peer 1 (2) at Term 4] peer 0 accept append which waht 10
+1724: [peer 1 (2) at Term 4] Leader Commited 9
+1775: [peer 0 (0) at Term 4] accept the log now index 9, peer have commit 9
+1775: [peer 1 (2) at Term 4] peer 0 accept append which waht 10
+1820: [peer 3 (0) at Term 4] accept the log now index 9, peer have commit 9
+1821: [peer 1 (2) at Term 4] peer 3 accept append which waht 10
+1826: [peer 0 (0) at Term 4] accept the log now index 9, peer have commit 9
+1826: [peer 1 (2) at Term 4] peer 0 accept append which waht 10
+1826: [peer 1 (2) at Term 4] Leader Commited 9
+1852: [peer 3 (0) at Term 4] accept the log now index 9, peer have commit 9
+1853: [peer 1 (2) at Term 4] peer 3 accept append which waht 10
+1876: [peer 0 (0) at Term 4] accept the log now index 9, peer have commit 9
+1876: [peer 1 (2) at Term 4] peer 0 accept append which waht 10
+1876: [peer 1 (2) at Term 4] Leader Commited 9
+1913: [peer 0 (0) at Term 4] accept the log now index 9, peer have commit 9
+1913: [peer 1 (2) at Term 4] peer 0 accept append which waht 10
+1950: [peer 3 (0) at Term 4] accept the log now index 9, peer have commit 9
+1951: [peer 1 (2) at Term 4] peer 3 accept append which waht 10
+1966: [peer 0 (0) at Term 4] accept the log now index 9, peer have commit 9
+1965: [peer 1 (2) at Term 4] peer 0 accept append which waht 10
+1966: [peer 1 (2) at Term 4] Leader Commited 9
+1982: [peer 4 (1) at Term 6] start election
+1994: [peer 0 (0) at Term 4] accept the log now index 9, peer have commit 9
+1993: [peer 1 (2) at Term 4] peer 0 accept append which waht 10
+2000: [peer 3 (0) at Term 4] accept the log now index 9, peer have commit 9
+2001: [peer 1 (2) at Term 4] peer 3 accept append which waht 10
+2001: [peer 1 (2) at Term 4] Leader Commited 9
+2042: [peer 3 (0) at Term 4] accept the log now index 9, peer have commit 9
+2043: [peer 1 (2) at Term 4] peer 3 accept append which waht 10
+2046: [peer 0 (0) at Term 4] accept the log now index 9, peer have commit 9
+2046: [peer 1 (2) at Term 4] peer 0 accept append which waht 10
+2046: [peer 1 (2) at Term 4] Leader Commited 9
+2078: [peer 1 (2) at Term 4] a new log to leader , now leader log len 10
+2078: [peer 2 (2) at Term 3] a new log to leader , now leader log len 19
+2087: [peer 1 (2) at Term 4] a new log to leader , now leader log len 11
+2086: [peer 2 (2) at Term 3] a new log to leader , now leader log len 20
+2260: [peer 3 (1) at Term 5] start election
+2271: [peer 0 (0) at Term 4] recieve a vote which come from 3
+2271: [peer 0 (0) at Term 5] a higher vote,Become follower
+2271: [peer 0 (0) at Term 5] Vote pass yizhixing
+2271: [peer 0 (0) at Term 5] vote to 3
+2271: [peer 4 (1) at Term 6] recieve a vote which come from 3
+2272: [peer 3 (1) at Term 5] receive a higher reply 6 , become follower
+2304: [peer 4 (1) at Term 7] start election
+2330: [peer 3 (0) at Term 6] recieve a vote which come from 4
+2330: [peer 3 (0) at Term 7] a higher vote,Become follower
+2330: [peer 3 (0) at Term 7] Vote false on LastTerm who come from 4 his loglastterm 1
+2403: [peer 1 (2) at Term 4] a new log to leader , now leader log len 12
+2403: [peer 2 (2) at Term 3] a new log to leader , now leader log len 21
+2417: [peer 1 (2) at Term 4] a new log to leader , now leader log len 13
+2417: [peer 2 (2) at Term 3] a new log to leader , now leader log len 22
+2423: [peer 1 (2) at Term 4] a new log to leader , now leader log len 14
+2423: [peer 2 (2) at Term 3] a new log to leader , now leader log len 23
+2436: [peer 1 (2) at Term 4] a new log to leader , now leader log len 15
+2436: [peer 2 (2) at Term 3] a new log to leader , now leader log len 24
+2441: [peer 1 (2) at Term 4] a new log to leader , now leader log len 16
+2441: [peer 2 (2) at Term 3] a new log to leader , now leader log len 25
+2448: [peer 1 (2) at Term 4] a new log to leader , now leader log len 17
+2448: [peer 2 (2) at Term 3] a new log to leader , now leader log len 26
+2454: [peer 1 (2) at Term 4] a new log to leader , now leader log len 18
+2454: [peer 2 (2) at Term 3] a new log to leader , now leader log len 27
+2455: [peer 1 (2) at Term 4] a new log to leader , now leader log len 19
+2455: [peer 2 (2) at Term 3] a new log to leader , now leader log len 28
+2459: [peer 1 (2) at Term 4] a new log to leader , now leader log len 20
+2459: [peer 2 (2) at Term 3] a new log to leader , now leader log len 29
+2471: [peer 1 (2) at Term 4] a new log to leader , now leader log len 21
+2471: [peer 2 (2) at Term 3] a new log to leader , now leader log len 30
+2476: [peer 1 (2) at Term 4] a new log to leader , now leader log len 22
+2476: [peer 2 (2) at Term 3] a new log to leader , now leader log len 31
+2481: [peer 1 (2) at Term 4] a new log to leader , now leader log len 23
+2481: [peer 2 (2) at Term 3] a new log to leader , now leader log len 32
+2494: [peer 0 (1) at Term 6] start election
+2494: [peer 3 (0) at Term 7] recieve a vote which come from 0
+2495: [peer 0 (1) at Term 6] receive a higher reply 7 , become follower
+2508: [peer 1 (2) at Term 4] a new log to leader , now leader log len 24
+2508: [peer 2 (2) at Term 3] a new log to leader , now leader log len 33
+2507: [peer 4 (1) at Term 7] recieve a vote which come from 0
+2515: [peer 1 (2) at Term 4] a new log to leader , now leader log len 25
+2515: [peer 2 (2) at Term 3] a new log to leader , now leader log len 34
+2529: [peer 1 (2) at Term 4] a new log to leader , now leader log len 26
+2530: [peer 2 (2) at Term 3] a new log to leader , now leader log len 35
+2533: [peer 1 (2) at Term 4] a new log to leader , now leader log len 27
+2534: [peer 2 (2) at Term 3] a new log to leader , now leader log len 36
+2533: [peer 4 (1) at Term 8] start election
+2541: [peer 0 (0) at Term 7] recieve a vote which come from 4
+2542: [peer 0 (0) at Term 8] a higher vote,Become follower
+2542: [peer 0 (0) at Term 8] Vote false on LastTerm who come from 4 his loglastterm 1
+2541: [peer 3 (0) at Term 7] recieve a vote which come from 4
+2541: [peer 3 (0) at Term 8] a higher vote,Become follower
+2541: [peer 3 (0) at Term 8] Vote false on LastTerm who come from 4 his loglastterm 1
+2546: [peer 1 (2) at Term 4] a new log to leader , now leader log len 28
+2547: [peer 2 (2) at Term 3] a new log to leader , now leader log len 37
+2550: [peer 1 (2) at Term 4] a new log to leader , now leader log len 29
+2550: [peer 2 (2) at Term 3] a new log to leader , now leader log len 38
+2561: [peer 1 (2) at Term 4] a new log to leader , now leader log len 30
+2562: [peer 2 (2) at Term 3] a new log to leader , now leader log len 39
+2574: [peer 1 (2) at Term 4] a new log to leader , now leader log len 31
+2574: [peer 2 (2) at Term 3] a new log to leader , now leader log len 40
+2578: [peer 1 (2) at Term 4] a new log to leader , now leader log len 32
+2578: [peer 2 (2) at Term 3] a new log to leader , now leader log len 41
+2584: [peer 1 (2) at Term 4] a new log to leader , now leader log len 33
+2584: [peer 2 (2) at Term 3] a new log to leader , now leader log len 42
+2594: [peer 1 (2) at Term 4] a new log to leader , now leader log len 34
+2594: [peer 2 (2) at Term 3] a new log to leader , now leader log len 43
+2630: [peer 1 (2) at Term 4] a new log to leader , now leader log len 35
+2630: [peer 2 (2) at Term 3] a new log to leader , now leader log len 44
+2632: [peer 3 (1) at Term 9] start election
+2647: [peer 0 (0) at Term 8] recieve a vote which come from 3
+2647: [peer 0 (0) at Term 9] a higher vote,Become follower
+2647: [peer 0 (0) at Term 9] Vote pass yizhixing
+2647: [peer 0 (0) at Term 9] vote to 3
+2657: [peer 4 (1) at Term 8] recieve a vote which come from 3
+2657: [peer 4 (0) at Term 9] a higher vote,Become follower
+2657: [peer 4 (0) at Term 9] Vote pass yizhixing
+2657: [peer 4 (0) at Term 9] vote to 3
+2658: [peer 3 (2) at Term 9] Become leader!!!! leader loglen 9 , leader commit 9
+2671: [peer 0 (0) at Term 9] log append false, I want 10 but accept a log after Previogindex 0
+2670: [peer 3 (2) at Term 9] peer 0 refused ,which want 10
+2683: [peer 4 (0) at Term 9] log append false, I want 2 but accept a log after Previogindex 0
+2683: [peer 3 (2) at Term 9] peer 4 refused ,which want 2
+2692: [peer 4 (0) at Term 9] accept the log now index 9, peer have commit 9
+2693: [peer 3 (2) at Term 9] peer 4 accept append which waht 10
+2715: [peer 0 (0) at Term 9] accept the log now index 9, peer have commit 9
+2714: [peer 3 (2) at Term 9] peer 0 accept append which waht 10
+2714: [peer 3 (2) at Term 9] Leader Commited 9
+2743: [peer 0 (0) at Term 9] accept the log now index 9, peer have commit 9
+2742: [peer 3 (2) at Term 9] peer 0 accept append which waht 10
+2743: [peer 4 (0) at Term 9] accept the log now index 9, peer have commit 9
+2743: [peer 3 (2) at Term 9] peer 4 accept append which waht 10
+2743: [peer 3 (2) at Term 9] Leader Commited 9
+2789: [peer 4 (0) at Term 9] accept the log now index 9, peer have commit 9
+2789: [peer 3 (2) at Term 9] peer 4 accept append which waht 10
+2840: [peer 4 (0) at Term 9] accept the log now index 9, peer have commit 9
+2840: [peer 3 (2) at Term 9] peer 4 accept append which waht 10
+2888: [peer 0 (0) at Term 9] accept the log now index 9, peer have commit 9
+2892: [peer 4 (0) at Term 9] accept the log now index 9, peer have commit 9
+2893: [peer 3 (2) at Term 9] peer 4 accept append which waht 10
+2902: [peer 1 (2) at Term 4] a new log to leader , now leader log len 36
+2902: [peer 2 (2) at Term 3] a new log to leader , now leader log len 45
+2901: [peer 3 (2) at Term 9] a new log to leader , now leader log len 10
+2913: [peer 1 (2) at Term 4] a new log to leader , now leader log len 37
+2918: [peer 2 (2) at Term 3] a new log to leader , now leader log len 46
+2918: [peer 3 (2) at Term 9] a new log to leader , now leader log len 11
+2926: [peer 1 (2) at Term 4] a new log to leader , now leader log len 38
+2926: [peer 2 (2) at Term 3] a new log to leader , now leader log len 47
+2925: [peer 3 (2) at Term 9] a new log to leader , now leader log len 12
+2932: [peer 0 (0) at Term 9] accept the log now index 10, peer have commit 9
+2931: [peer 3 (2) at Term 9] peer 0 accept append which waht 11
+2941: [peer 1 (2) at Term 4] a new log to leader , now leader log len 39
+2940: [peer 4 (0) at Term 9] accept the log now index 10, peer have commit 9
+2941: [peer 2 (2) at Term 3] a new log to leader , now leader log len 48
+2941: [peer 3 (2) at Term 9] a new log to leader , now leader log len 13
+2950: [peer 1 (2) at Term 4] a new log to leader , now leader log len 40
+2950: [peer 2 (2) at Term 3] a new log to leader , now leader log len 49
+2950: [peer 3 (2) at Term 9] a new log to leader , now leader log len 14
+2957: [peer 1 (2) at Term 4] a new log to leader , now leader log len 41
+2958: [peer 2 (2) at Term 3] a new log to leader , now leader log len 50
+2958: [peer 3 (2) at Term 9] a new log to leader , now leader log len 15
+2970: [peer 1 (2) at Term 4] a new log to leader , now leader log len 42
+2971: [peer 2 (2) at Term 3] a new log to leader , now leader log len 51
+2970: [peer 3 (2) at Term 9] a new log to leader , now leader log len 16
+2977: [peer 1 (2) at Term 4] a new log to leader , now leader log len 43
+2977: [peer 2 (2) at Term 3] a new log to leader , now leader log len 52
+2977: [peer 3 (2) at Term 9] a new log to leader , now leader log len 17
+2989: [peer 1 (2) at Term 4] a new log to leader , now leader log len 44
+2989: [peer 2 (2) at Term 3] a new log to leader , now leader log len 53
+2989: [peer 3 (2) at Term 9] a new log to leader , now leader log len 18
+2994: [peer 1 (2) at Term 4] a new log to leader , now leader log len 45
+2995: [peer 2 (2) at Term 3] a new log to leader , now leader log len 54
+2994: [peer 3 (2) at Term 9] a new log to leader , now leader log len 19
+2997: [peer 1 (2) at Term 4] a new log to leader , now leader log len 46
+2997: [peer 2 (2) at Term 3] a new log to leader , now leader log len 55
+2997: [peer 3 (2) at Term 9] a new log to leader , now leader log len 20
+3003: [peer 1 (2) at Term 4] a new log to leader , now leader log len 47
+3003: [peer 2 (2) at Term 3] a new log to leader , now leader log len 56
+3011: [peer 3 (2) at Term 9] a new log to leader , now leader log len 21
+3013: [peer 1 (2) at Term 4] a new log to leader , now leader log len 48
+3013: [peer 2 (2) at Term 3] a new log to leader , now leader log len 57
+3013: [peer 3 (2) at Term 9] a new log to leader , now leader log len 22
+3018: [peer 1 (2) at Term 4] a new log to leader , now leader log len 49
+3019: [peer 2 (2) at Term 3] a new log to leader , now leader log len 58
+3018: [peer 3 (2) at Term 9] a new log to leader , now leader log len 23
+3018: [peer 4 (0) at Term 9] accept the log now index 20, peer have commit 9
+3019: [peer 3 (2) at Term 9] peer 4 accept append which waht 21
+3032: [peer 1 (2) at Term 4] a new log to leader , now leader log len 50
+3033: [peer 2 (2) at Term 3] a new log to leader , now leader log len 59
+3032: [peer 3 (2) at Term 9] a new log to leader , now leader log len 24
+3036: [peer 0 (0) at Term 9] accept the log now index 20, peer have commit 9
+3044: [peer 1 (2) at Term 4] a new log to leader , now leader log len 51
+3045: [peer 2 (2) at Term 3] a new log to leader , now leader log len 60
+3044: [peer 3 (2) at Term 9] a new log to leader , now leader log len 25
+3058: [peer 1 (2) at Term 4] a new log to leader , now leader log len 52
+3058: [peer 2 (2) at Term 3] a new log to leader , now leader log len 61
+3058: [peer 3 (2) at Term 9] a new log to leader , now leader log len 26
+3072: [peer 1 (2) at Term 4] a new log to leader , now leader log len 53
+3072: [peer 2 (2) at Term 3] a new log to leader , now leader log len 62
+3072: [peer 3 (2) at Term 9] a new log to leader , now leader log len 27
+3081: [peer 1 (2) at Term 4] a new log to leader , now leader log len 54
+3081: [peer 2 (2) at Term 3] a new log to leader , now leader log len 63
+3081: [peer 3 (2) at Term 9] a new log to leader , now leader log len 28
+3082: [peer 4 (0) at Term 9] accept a lower keep-alive! from 2
+3090: [peer 1 (2) at Term 4] a new log to leader , now leader log len 55
+3090: [peer 2 (2) at Term 3] a new log to leader , now leader log len 64
+3090: [peer 3 (2) at Term 9] a new log to leader , now leader log len 29
+3093: [peer 1 (2) at Term 4] a new log to leader , now leader log len 56
+3093: [peer 2 (2) at Term 3] a new log to leader , now leader log len 65
+3093: [peer 3 (2) at Term 9] a new log to leader , now leader log len 30
+3129: [peer 4 (0) at Term 9] accept a lower keep-alive! from 1
+3131: [peer 1 (0) at Term 9] Higher append reply , become follower
+3132: [peer 0 (0) at Term 9] accept a lower keep-alive! from 1
+3150: [peer 1 (1) at Term 10] start election
+3158: [peer 0 (0) at Term 9] recieve a vote which come from 1
+3158: [peer 0 (0) at Term 10] a higher vote,Become follower
+3158: [peer 0 (0) at Term 10] Vote false on LastTerm who come from 1 his loglastterm 4
+3177: [peer 4 (0) at Term 9] recieve a vote which come from 1
+3177: [peer 4 (0) at Term 10] a higher vote,Become follower
+3177: [peer 4 (0) at Term 10] Vote false on LastTerm who come from 1 his loglastterm 4
+3267: [peer 2 (2) at Term 3] a new log to leader , now leader log len 66
+3267: [peer 3 (2) at Term 9] a new log to leader , now leader log len 31
+3317: [peer 4 (1) at Term 11] start election
+3334: [peer 0 (1) at Term 11] start election
+3343: [peer 0 (1) at Term 11] recieve a vote which come from 4
+3345: [peer 4 (1) at Term 11] recieve a vote which come from 0
+3429: [peer 1 (1) at Term 11] start election
+3583: [peer 2 (2) at Term 3] a new log to leader , now leader log len 67
+3583: [peer 3 (2) at Term 9] a new log to leader , now leader log len 32
+3592: [peer 2 (2) at Term 3] a new log to leader , now leader log len 68
+3592: [peer 3 (2) at Term 9] a new log to leader , now leader log len 33
+3593: [peer 2 (2) at Term 3] a new log to leader , now leader log len 69
+3592: [peer 3 (2) at Term 9] a new log to leader , now leader log len 34
+3599: [peer 2 (2) at Term 3] a new log to leader , now leader log len 70
+3599: [peer 3 (2) at Term 9] a new log to leader , now leader log len 35
+3604: [peer 2 (2) at Term 3] a new log to leader , now leader log len 71
+3604: [peer 3 (2) at Term 9] a new log to leader , now leader log len 36
+3617: [peer 1 (1) at Term 12] start election
+3617: [peer 4 (1) at Term 11] accept a lower keep-alive! from 3
+3618: [peer 3 (0) at Term 11] Higher append reply , become follower
+3620: [peer 2 (2) at Term 3] a new log to leader , now leader log len 72
+3621: [peer 2 (2) at Term 3] a new log to leader , now leader log len 73
+3635: [peer 2 (2) at Term 3] a new log to leader , now leader log len 74
+3641: [peer 2 (2) at Term 3] a new log to leader , now leader log len 75
+3642: [peer 0 (1) at Term 11] accept a lower keep-alive! from 3
+3653: [peer 2 (2) at Term 3] a new log to leader , now leader log len 76
+3663: [peer 2 (2) at Term 3] a new log to leader , now leader log len 77
+3663: [peer 3 (1) at Term 12] start election
+3664: [peer 0 (1) at Term 12] start election
+3667: [peer 3 (1) at Term 12] recieve a vote which come from 0
+3676: [peer 4 (1) at Term 11] recieve a vote which come from 0
+3676: [peer 4 (0) at Term 12] a higher vote,Become follower
+3676: [peer 4 (0) at Term 12] Vote pass yizhixing
+3676: [peer 4 (0) at Term 12] vote to 0
+3680: [peer 0 (1) at Term 12] recieve a vote which come from 3
+3687: [peer 4 (0) at Term 12] recieve a vote which come from 3
+3687: [peer 4 (0) at Term 12] Vote pass yizhixing
+3767: [peer 2 (2) at Term 3] a new log to leader , now leader log len 78
+3775: [peer 2 (2) at Term 3] a new log to leader , now leader log len 79
+3778: [peer 2 (2) at Term 3] a new log to leader , now leader log len 80
+3849: [peer 1 (1) at Term 13] start election
+3915: [peer 4 (1) at Term 13] start election
+3922: [peer 3 (1) at Term 12] recieve a vote which come from 4
+3922: [peer 3 (0) at Term 13] a higher vote,Become follower
+3922: [peer 3 (0) at Term 13] Vote false on LastIndex who come from 4 his Lastlogindex 20
+3942: [peer 3 (1) at Term 14] start election
+3944: [peer 0 (1) at Term 13] start election
+3954: [peer 3 (1) at Term 14] recieve a vote which come from 0
+3956: [peer 0 (1) at Term 13] receive a higher reply 14 , become follower
+3958: [peer 4 (1) at Term 13] recieve a vote which come from 3
+3958: [peer 4 (0) at Term 14] a higher vote,Become follower
+3958: [peer 4 (0) at Term 14] Vote pass yizhixing
+3958: [peer 4 (0) at Term 14] vote to 3
+3963: [peer 0 (0) at Term 14] recieve a vote which come from 3
+3963: [peer 0 (0) at Term 14] Vote pass yizhixing
+3963: [peer 0 (0) at Term 14] vote to 3
+3962: [peer 3 (2) at Term 14] Become leader!!!! leader loglen 36 , leader commit 9
+3965: [peer 4 (0) at Term 14] recieve a vote which come from 0
+3984: [peer 0 (0) at Term 14] accept the log now index 36, peer have commit 9
+3985: [peer 3 (2) at Term 14] peer 0 accept append which waht 37
+3990: [peer 4 (0) at Term 14] accept the log now index 36, peer have commit 9
+3991: [peer 3 (2) at Term 14] peer 4 accept append which waht 37
+3991: [peer 3 (2) at Term 14] Leader Commited 36
+4004: [peer 4 (0) at Term 14] accept the log now index 36, peer have commit 9
+4006: [peer 0 (0) at Term 14] accept the log now index 36, peer have commit 9
+4005: [peer 3 (2) at Term 14] peer 0 accept append which waht 37
+4051: [peer 0 (0) at Term 14] accept the log now index 36, peer have commit 36
+4050: [peer 3 (2) at Term 14] peer 0 accept append which waht 37
+4097: [peer 4 (0) at Term 14] accept the log now index 36, peer have commit 36
+4098: [peer 3 (2) at Term 14] peer 4 accept append which waht 37
+4101: [peer 0 (0) at Term 14] accept the log now index 36, peer have commit 36
+4100: [peer 3 (2) at Term 14] peer 0 accept append which waht 37
+4100: [peer 3 (2) at Term 14] Leader Commited 36
+4148: [peer 0 (0) at Term 14] accept the log now index 36, peer have commit 36
+4147: [peer 3 (2) at Term 14] peer 0 accept append which waht 37
+4153: [peer 4 (0) at Term 14] accept the log now index 36, peer have commit 36
+4154: [peer 3 (2) at Term 14] peer 4 accept append which waht 37
+4154: [peer 3 (2) at Term 14] Leader Commited 36
+4191: [peer 4 (0) at Term 14] accept the log now index 36, peer have commit 36
+4192: [peer 3 (2) at Term 14] peer 4 accept append which waht 37
+4204: [peer 0 (0) at Term 14] accept the log now index 36, peer have commit 36
+4203: [peer 3 (2) at Term 14] peer 0 accept append which waht 37
+4203: [peer 3 (2) at Term 14] Leader Commited 36
+4218: [peer 1 (1) at Term 14] start election
+4235: [peer 0 (0) at Term 14] accept the log now index 36, peer have commit 36
+4234: [peer 3 (2) at Term 14] peer 0 accept append which waht 37
+4248: [peer 4 (0) at Term 14] accept the log now index 36, peer have commit 36
+4249: [peer 3 (2) at Term 14] peer 4 accept append which waht 37
+4249: [peer 3 (2) at Term 14] Leader Commited 36
+4275: [peer 2 (2) at Term 3] a new log to leader , now leader log len 81
+4275: [peer 3 (2) at Term 14] a new log to leader , now leader log len 37
+4277: [peer 0 (0) at Term 14] accept the log now index 36, peer have commit 36
+4276: [peer 3 (2) at Term 14] peer 0 accept append which waht 37
+4285: [peer 4 (0) at Term 14] accept the log now index 36, peer have commit 36
+4286: [peer 2 (2) at Term 3] a new log to leader , now leader log len 82
+4286: [peer 3 (2) at Term 14] a new log to leader , now leader log len 38
+4287: [peer 3 (2) at Term 14] peer 4 accept append which waht 37
+4287: [peer 3 (2) at Term 14] Leader Commited 36
+4290: [peer 2 (2) at Term 3] a new log to leader , now leader log len 83
+4290: [peer 3 (2) at Term 14] a new log to leader , now leader log len 39
+4297: [peer 2 (2) at Term 3] a new log to leader , now leader log len 84
+4297: [peer 3 (2) at Term 14] a new log to leader , now leader log len 40
+4298: [peer 2 (2) at Term 3] a new log to leader , now leader log len 85
+4298: [peer 3 (2) at Term 14] a new log to leader , now leader log len 41
+4309: [peer 2 (2) at Term 3] a new log to leader , now leader log len 86
+4309: [peer 3 (2) at Term 14] a new log to leader , now leader log len 42
+4314: [peer 2 (2) at Term 3] a new log to leader , now leader log len 87
+4314: [peer 3 (2) at Term 14] a new log to leader , now leader log len 43
+4326: [peer 2 (2) at Term 3] a new log to leader , now leader log len 88
+4326: [peer 3 (2) at Term 14] a new log to leader , now leader log len 44
+4516: [peer 4 (1) at Term 15] start election
+4522: [peer 0 (0) at Term 14] recieve a vote which come from 4
+4522: [peer 0 (0) at Term 15] a higher vote,Become follower
+4522: [peer 0 (0) at Term 15] Vote pass yizhixing
+4522: [peer 0 (0) at Term 15] vote to 4
+4531: [peer 1 (1) at Term 14] recieve a vote which come from 4
+4531: [peer 1 (0) at Term 15] a higher vote,Become follower
+4531: [peer 1 (0) at Term 15] Vote pass yizhixing
+4531: [peer 1 (0) at Term 15] vote to 4
+4530: [peer 4 (2) at Term 15] Become leader!!!! leader loglen 36 , leader commit 36
+4546: [peer 1 (0) at Term 15] accept the log now index 36, peer have commit 36
+4546: [peer 4 (2) at Term 15] peer 1 accept append which waht 37
+4557: [peer 0 (0) at Term 15] accept the log now index 36, peer have commit 36
+4556: [peer 4 (2) at Term 15] peer 0 accept append which waht 37
+4556: [peer 4 (2) at Term 15] Leader Commited 36
+4565: [peer 1 (0) at Term 15] accept the log now index 36, peer have commit 36
+4564: [peer 4 (2) at Term 15] peer 1 accept append which waht 37
+4570: [peer 0 (0) at Term 15] accept the log now index 36, peer have commit 36
+4584: [peer 2 (2) at Term 3] a new log to leader , now leader log len 89
+4584: [peer 3 (2) at Term 14] a new log to leader , now leader log len 45
+4584: [peer 4 (2) at Term 15] a new log to leader , now leader log len 37
+4591: [peer 2 (2) at Term 3] a new log to leader , now leader log len 90
+4591: [peer 3 (2) at Term 14] a new log to leader , now leader log len 46
+4591: [peer 4 (2) at Term 15] a new log to leader , now leader log len 38
+4598: [peer 2 (2) at Term 3] a new log to leader , now leader log len 91
+4598: [peer 3 (2) at Term 14] a new log to leader , now leader log len 47
+4599: [peer 4 (2) at Term 15] a new log to leader , now leader log len 39
+4609: [peer 2 (2) at Term 3] a new log to leader , now leader log len 92
+4609: [peer 3 (2) at Term 14] a new log to leader , now leader log len 48
+4609: [peer 4 (2) at Term 15] a new log to leader , now leader log len 40
+4619: [peer 2 (2) at Term 3] a new log to leader , now leader log len 93
+4619: [peer 3 (2) at Term 14] a new log to leader , now leader log len 49
+4619: [peer 4 (2) at Term 15] a new log to leader , now leader log len 41
+4625: [peer 2 (2) at Term 3] a new log to leader , now leader log len 94
+4625: [peer 3 (2) at Term 14] a new log to leader , now leader log len 50
+4625: [peer 4 (2) at Term 15] a new log to leader , now leader log len 42
+4638: [peer 2 (2) at Term 3] a new log to leader , now leader log len 95
+4638: [peer 3 (2) at Term 14] a new log to leader , now leader log len 51
+4638: [peer 4 (2) at Term 15] a new log to leader , now leader log len 43
+4694: [peer 0 (0) at Term 15] accept a lower keep-alive! from 2
+4707: [peer 1 (0) at Term 15] accept a lower keep-alive! from 2
+4741: [peer 1 (0) at Term 15] accept a lower keep-alive! from 2
+4741: [peer 2 (0) at Term 15] Higher append reply , become follower
+4752: [peer 0 (0) at Term 15] accept a lower keep-alive! from 2
+4771: [peer 2 (1) at Term 16] start election
+4779: [peer 1 (0) at Term 15] recieve a vote which come from 2
+4779: [peer 1 (0) at Term 16] a higher vote,Become follower
+4780: [peer 1 (0) at Term 16] Vote false on LastTerm who come from 2 his loglastterm 3
+4788: [peer 0 (0) at Term 15] recieve a vote which come from 2
+4788: [peer 0 (0) at Term 16] a higher vote,Become follower
+4788: [peer 0 (0) at Term 16] Vote false on LastTerm who come from 2 his loglastterm 3
+4811: [peer 3 (2) at Term 14] a new log to leader , now leader log len 52
+4811: [peer 4 (2) at Term 15] a new log to leader , now leader log len 44
+4823: [peer 3 (2) at Term 14] a new log to leader , now leader log len 53
+4823: [peer 4 (2) at Term 15] a new log to leader , now leader log len 45
+4834: [peer 1 (1) at Term 17] start election
+4845: [peer 2 (1) at Term 16] recieve a vote which come from 1
+4845: [peer 2 (0) at Term 17] a higher vote,Become follower
+4845: [peer 2 (0) at Term 17] Vote pass yizhixing
+4845: [peer 2 (0) at Term 17] vote to 1
+4855: [peer 0 (0) at Term 16] recieve a vote which come from 1
+4855: [peer 0 (0) at Term 17] a higher vote,Become follower
+4855: [peer 0 (0) at Term 17] Vote pass yizhixing
+4855: [peer 0 (0) at Term 17] vote to 1
+4855: [peer 1 (2) at Term 17] Become leader!!!! leader loglen 36 , leader commit 36
+4861: [peer 0 (0) at Term 17] accept the log now index 36, peer have commit 36
+4861: [peer 1 (2) at Term 17] peer 0 accept append which waht 37
+4878: [peer 2 (0) at Term 17] log append false, I want 2 but accept a log after Previogindex 0
+4879: [peer 1 (2) at Term 17] peer 2 refused ,which want 2
+4888: [peer 0 (0) at Term 17] accept the log now index 36, peer have commit 36
+4888: [peer 1 (2) at Term 17] peer 0 accept append which waht 37
+4906: [peer 2 (0) at Term 17] accept the log now index 36, peer have commit 36
+4907: [peer 1 (2) at Term 17] peer 2 accept append which waht 37
+4907: [peer 1 (2) at Term 17] Leader Commited 36
+4909: [peer 1 (2) at Term 17] a new log to leader , now leader log len 37
+4909: [peer 3 (2) at Term 14] a new log to leader , now leader log len 54
+4910: [peer 4 (2) at Term 15] a new log to leader , now leader log len 46
+4918: [peer 1 (2) at Term 17] a new log to leader , now leader log len 38
+4918: [peer 3 (2) at Term 14] a new log to leader , now leader log len 55
+4918: [peer 4 (2) at Term 15] a new log to leader , now leader log len 47
+4925: [peer 1 (2) at Term 17] a new log to leader , now leader log len 39
+4925: [peer 3 (2) at Term 14] a new log to leader , now leader log len 56
+4925: [peer 4 (2) at Term 15] a new log to leader , now leader log len 48
+4927: [peer 1 (2) at Term 17] a new log to leader , now leader log len 40
+4927: [peer 3 (2) at Term 14] a new log to leader , now leader log len 57
+4927: [peer 4 (2) at Term 15] a new log to leader , now leader log len 49
+4929: [peer 1 (2) at Term 17] a new log to leader , now leader log len 41
+4931: [peer 3 (2) at Term 14] a new log to leader , now leader log len 58
+4931: [peer 4 (2) at Term 15] a new log to leader , now leader log len 50
+4938: [peer 1 (2) at Term 17] a new log to leader , now leader log len 42
+4938: [peer 3 (2) at Term 14] a new log to leader , now leader log len 59
+4938: [peer 4 (2) at Term 15] a new log to leader , now leader log len 51
+4941: [peer 1 (2) at Term 17] a new log to leader , now leader log len 43
+4941: [peer 3 (2) at Term 14] a new log to leader , now leader log len 60
+4941: [peer 4 (2) at Term 15] a new log to leader , now leader log len 52
+4952: [peer 1 (2) at Term 17] a new log to leader , now leader log len 44
+4952: [peer 3 (2) at Term 14] a new log to leader , now leader log len 61
+4952: [peer 4 (2) at Term 15] a new log to leader , now leader log len 53
+4957: [peer 1 (2) at Term 17] a new log to leader , now leader log len 45
+4957: [peer 3 (2) at Term 14] a new log to leader , now leader log len 62
+4957: [peer 4 (2) at Term 15] a new log to leader , now leader log len 54
+4968: [peer 1 (2) at Term 17] a new log to leader , now leader log len 46
+4971: [peer 3 (2) at Term 14] a new log to leader , now leader log len 63
+4971: [peer 4 (2) at Term 15] a new log to leader , now leader log len 55
+4982: [peer 1 (2) at Term 17] a new log to leader , now leader log len 47
+4982: [peer 3 (2) at Term 14] a new log to leader , now leader log len 64
+4982: [peer 4 (2) at Term 15] a new log to leader , now leader log len 56
+4986: [peer 1 (2) at Term 17] a new log to leader , now leader log len 48
+4986: [peer 3 (2) at Term 14] a new log to leader , now leader log len 65
+4987: [peer 4 (2) at Term 15] a new log to leader , now leader log len 57
+4996: [peer 0 (0) at Term 17] accept a lower keep-alive! from 4
+4994: [peer 4 (0) at Term 17] Higher append reply , become follower
+4999: [peer 1 (2) at Term 17] a new log to leader , now leader log len 49
+4999: [peer 3 (2) at Term 14] a new log to leader , now leader log len 66
+5009: [peer 1 (2) at Term 17] a new log to leader , now leader log len 50
+5009: [peer 3 (2) at Term 14] a new log to leader , now leader log len 67
+5022: [peer 1 (2) at Term 17] a new log to leader , now leader log len 51
+5022: [peer 3 (2) at Term 14] a new log to leader , now leader log len 68
+5029: [peer 4 (1) at Term 18] start election
+5036: [peer 1 (2) at Term 17] a new log to leader , now leader log len 52
+5036: [peer 3 (2) at Term 14] a new log to leader , now leader log len 69
+5049: [peer 2 (0) at Term 17] recieve a vote which come from 4
+5049: [peer 2 (0) at Term 18] a higher vote,Become follower
+5049: [peer 2 (0) at Term 18] Vote pass yizhixing
+5049: [peer 2 (0) at Term 18] vote to 4
+5051: [peer 1 (2) at Term 17] a new log to leader , now leader log len 53
+5051: [peer 3 (2) at Term 14] a new log to leader , now leader log len 70
+5055: [peer 0 (0) at Term 17] recieve a vote which come from 4
+5055: [peer 0 (0) at Term 18] a higher vote,Become follower
+5055: [peer 0 (0) at Term 18] Vote pass yizhixing
+5055: [peer 0 (0) at Term 18] vote to 4
+5057: [peer 1 (2) at Term 17] a new log to leader , now leader log len 54
+5057: [peer 3 (2) at Term 14] a new log to leader , now leader log len 71
+5064: [peer 1 (2) at Term 17] a new log to leader , now leader log len 55
+5063: [peer 3 (2) at Term 14] a new log to leader , now leader log len 72
+5071: [peer 1 (2) at Term 17] a new log to leader , now leader log len 56
+5071: [peer 3 (2) at Term 14] a new log to leader , now leader log len 73
+5076: [peer 1 (2) at Term 17] a new log to leader , now leader log len 57
+5076: [peer 3 (2) at Term 14] a new log to leader , now leader log len 74
+5120: [peer 1 (2) at Term 17] a new log to leader , now leader log len 58
+5120: [peer 3 (2) at Term 14] a new log to leader , now leader log len 75
+5127: [peer 1 (2) at Term 17] a new log to leader , now leader log len 59
+5127: [peer 3 (2) at Term 14] a new log to leader , now leader log len 76
+5135: [peer 1 (2) at Term 17] a new log to leader , now leader log len 60
+5135: [peer 3 (2) at Term 14] a new log to leader , now leader log len 77
+5148: [peer 1 (2) at Term 17] a new log to leader , now leader log len 61
+5148: [peer 3 (2) at Term 14] a new log to leader , now leader log len 78
+5154: [peer 1 (2) at Term 17] a new log to leader , now leader log len 62
+5154: [peer 3 (2) at Term 14] a new log to leader , now leader log len 79
+5163: [peer 1 (2) at Term 17] a new log to leader , now leader log len 63
+5163: [peer 3 (2) at Term 14] a new log to leader , now leader log len 80
+5173: [peer 1 (2) at Term 17] a new log to leader , now leader log len 64
+5173: [peer 3 (2) at Term 14] a new log to leader , now leader log len 81
+5184: [peer 1 (2) at Term 17] a new log to leader , now leader log len 65
+5184: [peer 3 (2) at Term 14] a new log to leader , now leader log len 82
+5192: [peer 1 (2) at Term 17] a new log to leader , now leader log len 66
+5192: [peer 3 (2) at Term 14] a new log to leader , now leader log len 83
+5200: [peer 1 (2) at Term 17] a new log to leader , now leader log len 67
+5200: [peer 3 (2) at Term 14] a new log to leader , now leader log len 84
+5212: [peer 1 (2) at Term 17] a new log to leader , now leader log len 68
+5213: [peer 3 (2) at Term 14] a new log to leader , now leader log len 85
+5222: [peer 1 (2) at Term 17] a new log to leader , now leader log len 69
+5222: [peer 3 (2) at Term 14] a new log to leader , now leader log len 86
+5233: [peer 1 (2) at Term 17] a new log to leader , now leader log len 70
+5233: [peer 3 (2) at Term 14] a new log to leader , now leader log len 87
+5247: [peer 1 (2) at Term 17] a new log to leader , now leader log len 71
+5246: [peer 3 (2) at Term 14] a new log to leader , now leader log len 88
+5257: [peer 1 (2) at Term 17] a new log to leader , now leader log len 72
+5257: [peer 3 (2) at Term 14] a new log to leader , now leader log len 89
+5271: [peer 1 (2) at Term 17] a new log to leader , now leader log len 73
+5271: [peer 3 (2) at Term 14] a new log to leader , now leader log len 90
+5282: [peer 1 (2) at Term 17] a new log to leader , now leader log len 74
+5282: [peer 3 (2) at Term 14] a new log to leader , now leader log len 91
+5284: [peer 0 (1) at Term 19] start election
+5285: [peer 1 (2) at Term 17] a new log to leader , now leader log len 75
+5285: [peer 3 (2) at Term 14] a new log to leader , now leader log len 92
+5287: [peer 2 (0) at Term 18] recieve a vote which come from 0
+5287: [peer 2 (0) at Term 19] a higher vote,Become follower
+5287: [peer 2 (0) at Term 19] Vote pass yizhixing
+5287: [peer 2 (0) at Term 19] vote to 0
+5289: [peer 1 (2) at Term 17] a new log to leader , now leader log len 76
+5289: [peer 3 (2) at Term 14] a new log to leader , now leader log len 93
+5298: [peer 1 (2) at Term 17] a new log to leader , now leader log len 77
+5298: [peer 3 (2) at Term 14] a new log to leader , now leader log len 94
+5305: [peer 4 (1) at Term 19] start election
+5306: [peer 4 (1) at Term 19] recieve a vote which come from 0
+5314: [peer 0 (1) at Term 19] recieve a vote which come from 4
+5332: [peer 2 (0) at Term 19] recieve a vote which come from 4
+5332: [peer 2 (0) at Term 19] Vote pass yizhixing
+5468: [peer 0 (1) at Term 20] start election
+5482: [peer 2 (0) at Term 19] recieve a vote which come from 0
+5482: [peer 2 (0) at Term 20] a higher vote,Become follower
+5482: [peer 2 (0) at Term 20] Vote pass yizhixing
+5482: [peer 2 (0) at Term 20] vote to 0
+5482: [peer 4 (1) at Term 19] recieve a vote which come from 0
+5482: [peer 4 (0) at Term 20] a higher vote,Become follower
+5482: [peer 4 (0) at Term 20] Vote false on LastTerm who come from 0 his loglastterm 9
+5539: [peer 4 (1) at Term 21] start election
+5561: [peer 2 (0) at Term 20] recieve a vote which come from 4
+5561: [peer 2 (0) at Term 21] a higher vote,Become follower
+5561: [peer 2 (0) at Term 21] Vote pass yizhixing
+5561: [peer 2 (0) at Term 21] vote to 4
+5616: [peer 1 (2) at Term 17] a new log to leader , now leader log len 78
+5616: [peer 3 (2) at Term 14] a new log to leader , now leader log len 95
+5622: [peer 1 (2) at Term 17] a new log to leader , now leader log len 79
+5622: [peer 3 (2) at Term 14] a new log to leader , now leader log len 96
+5633: [peer 1 (2) at Term 17] a new log to leader , now leader log len 80
+5633: [peer 3 (2) at Term 14] a new log to leader , now leader log len 97
+5640: [peer 1 (2) at Term 17] a new log to leader , now leader log len 81
+5640: [peer 3 (2) at Term 14] a new log to leader , now leader log len 98
+5652: [peer 0 (1) at Term 21] start election
+5653: [peer 1 (2) at Term 17] a new log to leader , now leader log len 82
+5653: [peer 3 (2) at Term 14] a new log to leader , now leader log len 99
+5659: [peer 2 (0) at Term 21] recieve a vote which come from 0
+5659: [peer 2 (0) at Term 21] Vote pass yizhixing
+5669: [peer 4 (1) at Term 21] recieve a vote which come from 0
+5832: [peer 2 (1) at Term 22] start election
+5844: [peer 0 (1) at Term 21] recieve a vote which come from 2
+5844: [peer 0 (0) at Term 22] a higher vote,Become follower
+5844: [peer 0 (0) at Term 22] Vote pass yizhixing
+5844: [peer 0 (0) at Term 22] vote to 2
+5851: [peer 4 (1) at Term 21] recieve a vote which come from 2
+5851: [peer 4 (0) at Term 22] a higher vote,Become follower
+5851: [peer 4 (0) at Term 22] Vote false on LastTerm who come from 2 his loglastterm 9
+5862: [peer 4 (1) at Term 23] start election
+5865: [peer 0 (0) at Term 22] recieve a vote which come from 4
+5865: [peer 0 (0) at Term 23] a higher vote,Become follower
+5865: [peer 0 (0) at Term 23] Vote pass yizhixing
+5865: [peer 0 (0) at Term 23] vote to 4
+5883: [peer 2 (1) at Term 22] recieve a vote which come from 4
+5883: [peer 2 (0) at Term 23] a higher vote,Become follower
+5883: [peer 2 (0) at Term 23] Vote pass yizhixing
+5883: [peer 2 (0) at Term 23] vote to 4
+6014: [peer 1 (2) at Term 17] a new log to leader , now leader log len 83
+6014: [peer 3 (2) at Term 14] a new log to leader , now leader log len 100
+6022: [peer 1 (2) at Term 17] a new log to leader , now leader log len 84
+6022: [peer 3 (2) at Term 14] a new log to leader , now leader log len 101
+6125: [peer 1 (2) at Term 17] a new log to leader , now leader log len 85
+6126: [peer 3 (2) at Term 14] a new log to leader , now leader log len 102
+6132: [peer 1 (2) at Term 17] a new log to leader , now leader log len 86
+6133: [peer 3 (2) at Term 14] a new log to leader , now leader log len 103
+6150: [peer 1 (2) at Term 17] a new log to leader , now leader log len 87
+6150: [peer 3 (2) at Term 14] a new log to leader , now leader log len 104
+6157: [peer 2 (1) at Term 24] start election
+6166: [peer 4 (1) at Term 23] recieve a vote which come from 2
+6166: [peer 4 (0) at Term 24] a higher vote,Become follower
+6166: [peer 4 (0) at Term 24] Vote false on LastTerm who come from 2 his loglastterm 9
+6173: [peer 0 (0) at Term 23] recieve a vote which come from 2
+6173: [peer 0 (0) at Term 24] a higher vote,Become follower
+6173: [peer 0 (0) at Term 24] Vote pass yizhixing
+6173: [peer 0 (0) at Term 24] vote to 2
+6186: [peer 4 (1) at Term 25] start election
+6205: [peer 0 (0) at Term 24] recieve a vote which come from 4
+6205: [peer 0 (0) at Term 25] a higher vote,Become follower
+6205: [peer 0 (0) at Term 25] Vote pass yizhixing
+6205: [peer 0 (0) at Term 25] vote to 4
+6210: [peer 2 (1) at Term 24] recieve a vote which come from 4
+6210: [peer 2 (0) at Term 25] a higher vote,Become follower
+6210: [peer 2 (0) at Term 25] Vote pass yizhixing
+6210: [peer 2 (0) at Term 25] vote to 4
+6210: [peer 4 (2) at Term 25] Become leader!!!! leader loglen 57 , leader commit 36
+6241: [peer 0 (0) at Term 25] accept the log now index 57, peer have commit 36
+6292: [peer 2 (0) at Term 25] accept the log now index 57, peer have commit 36
+6292: [peer 4 (2) at Term 25] peer 2 accept append which waht 58
+6305: [peer 0 (0) at Term 25] accept the log now index 57, peer have commit 36
+6304: [peer 4 (2) at Term 25] peer 0 accept append which waht 58
+6304: [peer 4 (2) at Term 25] Leader Commited 57
+6343: [peer 0 (0) at Term 25] accept the log now index 57, peer have commit 57
+6342: [peer 4 (2) at Term 25] peer 0 accept append which waht 58
+6356: [peer 2 (0) at Term 25] accept the log now index 57, peer have commit 57
+6357: [peer 4 (2) at Term 25] peer 2 accept append which waht 58
+6357: [peer 4 (2) at Term 25] Leader Commited 57
+6376: [peer 0 (0) at Term 25] accept the log now index 57, peer have commit 57
+6374: [peer 4 (2) at Term 25] peer 0 accept append which waht 58
+6436: [peer 0 (0) at Term 25] accept the log now index 57, peer have commit 57
+6434: [peer 4 (2) at Term 25] peer 0 accept append which waht 58
+6447: [peer 2 (0) at Term 25] accept the log now index 57, peer have commit 57
+6447: [peer 4 (2) at Term 25] peer 2 accept append which waht 58
+6447: [peer 4 (2) at Term 25] Leader Commited 57
+6474: [peer 0 (0) at Term 25] accept the log now index 57, peer have commit 57
+6472: [peer 4 (2) at Term 25] peer 0 accept append which waht 58
+6477: [peer 2 (0) at Term 25] accept the log now index 57, peer have commit 57
+6476: [peer 4 (2) at Term 25] peer 2 accept append which waht 58
+6476: [peer 4 (2) at Term 25] Leader Commited 57
+6538: [peer 0 (0) at Term 25] accept the log now index 57, peer have commit 57
+6537: [peer 4 (2) at Term 25] peer 0 accept append which waht 58
+6540: [peer 2 (0) at Term 25] accept the log now index 57, peer have commit 57
+6540: [peer 4 (2) at Term 25] peer 2 accept append which waht 58
+6540: [peer 4 (2) at Term 25] Leader Commited 57
+6580: [peer 0 (0) at Term 25] accept the log now index 57, peer have commit 57
+6579: [peer 4 (2) at Term 25] peer 0 accept append which waht 58
+6583: [peer 2 (0) at Term 25] accept the log now index 57, peer have commit 57
+6583: [peer 4 (2) at Term 25] peer 2 accept append which waht 58
+6583: [peer 4 (2) at Term 25] Leader Commited 57
+6589: [peer 1 (2) at Term 17] a new log to leader , now leader log len 88
+6589: [peer 3 (2) at Term 14] a new log to leader , now leader log len 105
+6590: [peer 4 (2) at Term 25] a new log to leader , now leader log len 58
+6601: [peer 1 (2) at Term 17] a new log to leader , now leader log len 89
+6601: [peer 3 (2) at Term 14] a new log to leader , now leader log len 106
+6601: [peer 4 (2) at Term 25] a new log to leader , now leader log len 59
+6605: [peer 1 (2) at Term 17] a new log to leader , now leader log len 90
+6605: [peer 3 (2) at Term 14] a new log to leader , now leader log len 107
+6606: [peer 4 (2) at Term 25] a new log to leader , now leader log len 60
+6616: [peer 1 (2) at Term 17] a new log to leader , now leader log len 91
+6616: [peer 3 (2) at Term 14] a new log to leader , now leader log len 108
+6617: [peer 4 (2) at Term 25] a new log to leader , now leader log len 61
+6627: [peer 0 (0) at Term 25] accept a lower keep-alive! from 1
+6627: [peer 1 (0) at Term 25] Higher append reply , become follower
+6631: [peer 3 (2) at Term 14] a new log to leader , now leader log len 109
+6631: [peer 4 (2) at Term 25] a new log to leader , now leader log len 62
+6633: [peer 2 (0) at Term 25] accept a lower keep-alive! from 1
+6634: [peer 3 (2) at Term 14] a new log to leader , now leader log len 110
+6634: [peer 4 (2) at Term 25] a new log to leader , now leader log len 63
+6640: [peer 3 (2) at Term 14] a new log to leader , now leader log len 111
+6641: [peer 4 (2) at Term 25] a new log to leader , now leader log len 64
+6652: [peer 1 (1) at Term 26] start election
+6850: [peer 0 (1) at Term 26] start election
+6869: [peer 2 (0) at Term 25] recieve a vote which come from 0
+6869: [peer 2 (0) at Term 26] a higher vote,Become follower
+6869: [peer 2 (0) at Term 26] Vote pass yizhixing
+6869: [peer 2 (0) at Term 26] vote to 0
+6980: [peer 1 (1) at Term 27] start election
+7092: [peer 3 (2) at Term 14] a new log to leader , now leader log len 112
+7092: [peer 4 (2) at Term 25] a new log to leader , now leader log len 65
+7100: [peer 3 (2) at Term 14] a new log to leader , now leader log len 113
+7100: [peer 4 (2) at Term 25] a new log to leader , now leader log len 66
+7118: [peer 3 (2) at Term 14] a new log to leader , now leader log len 114
+7118: [peer 4 (2) at Term 25] a new log to leader , now leader log len 67
+7127: [peer 2 (1) at Term 27] start election
+7132: [peer 3 (2) at Term 14] a new log to leader , now leader log len 115
+7132: [peer 4 (2) at Term 25] a new log to leader , now leader log len 68
+7136: [peer 3 (2) at Term 14] a new log to leader , now leader log len 116
+7136: [peer 4 (2) at Term 25] a new log to leader , now leader log len 69
+7148: [peer 3 (2) at Term 14] a new log to leader , now leader log len 117
+7148: [peer 4 (2) at Term 25] a new log to leader , now leader log len 70
+7157: [peer 0 (1) at Term 26] recieve a vote which come from 2
+7157: [peer 0 (0) at Term 27] a higher vote,Become follower
+7157: [peer 0 (0) at Term 27] Vote pass yizhixing
+7157: [peer 0 (0) at Term 27] vote to 2
+7164: [peer 3 (2) at Term 14] a new log to leader , now leader log len 118
+7165: [peer 4 (2) at Term 25] a new log to leader , now leader log len 71
+7170: [peer 3 (2) at Term 14] a new log to leader , now leader log len 119
+7170: [peer 4 (2) at Term 25] a new log to leader , now leader log len 72
+7172: [peer 1 (1) at Term 28] start election
+7172: [peer 2 (1) at Term 27] recieve a vote which come from 1
+7172: [peer 2 (0) at Term 28] a higher vote,Become follower
+7172: [peer 2 (0) at Term 28] Vote pass yizhixing
+7173: [peer 2 (0) at Term 28] vote to 1
+7178: [peer 3 (2) at Term 14] a new log to leader , now leader log len 120
+7178: [peer 4 (2) at Term 25] a new log to leader , now leader log len 73
+7181: [peer 3 (2) at Term 14] a new log to leader , now leader log len 121
+7181: [peer 4 (2) at Term 25] a new log to leader , now leader log len 74
+7189: [peer 0 (0) at Term 27] recieve a vote which come from 1
+7189: [peer 0 (0) at Term 28] a higher vote,Become follower
+7189: [peer 0 (0) at Term 28] Vote pass yizhixing
+7189: [peer 0 (0) at Term 28] vote to 1
+7188: [peer 1 (2) at Term 28] Become leader!!!! leader loglen 91 , leader commit 36
+7196: [peer 1 (2) at Term 28] a new log to leader , now leader log len 92
+7197: [peer 3 (2) at Term 14] a new log to leader , now leader log len 122
+7197: [peer 4 (2) at Term 25] a new log to leader , now leader log len 75
+7213: [peer 0 (0) at Term 28] accept the log now index 91, peer have commit 36
+7213: [peer 1 (2) at Term 28] peer 0 accept append which waht 92
+7220: [peer 2 (0) at Term 28] accept the log now index 91, peer have commit 36
+7221: [peer 1 (2) at Term 28] peer 2 accept append which waht 92
+7221: [peer 1 (2) at Term 28] Leader Commited 91
+2022/10/17 10:00:56 1: log map[1:9365 2:6315 3:8763 4:1000 5:7888 6:4980 7:9123 8:1427 9:5476 10:2897 11:2316 12:4202 13:1821 14:1625 15:4060 16:6336 17:4878 18:1240 19:2330 20:6802 21:4658 22:8851 23:9376 24:8045 25:9028 26:9063 27:7765 28:8901 29:2104 30:9174 31:2604 32:2502 33:2743 34:3222 35:6846 36:5554]; server map[1:9365 2:6315 3:8763 4:1000 5:7888 6:4980 7:9123 8:1427 9:5476 10:2897 11:2316 12:4202 13:1821 14:1625 15:4060 16:6336 17:4878 18:1240 19:2330 20:6802 21:4658 22:8851 23:9376 24:8045 25:9028 26:9063 27:7765 28:8901 29:2104 30:9174 31:2604 32:2502 33:2743 34:3222 35:6846 36:5554 37:3445 38:8970 39:6721 40:2951 41:8098 42:3660 43:8920 44:1167 45:4497 46:8720 47:9511 48:1064 49:5239 50:6533 51:8011 52:9569 53:4209 54:998 55:4918 56:6126 57:4005]
+2022/10/17 10:00:56 1: log map[1:9365 2:6315 3:8763 4:1000 5:7888 6:4980 7:9123 8:1427 9:5476 10:2897 11:2316 12:4202 13:1821 14:1625 15:4060 16:6336 17:4878 18:1240 19:2330 20:6802 21:4658 22:8851 23:9376 24:8045 25:9028 26:9063 27:7765 28:8901 29:2104 30:9174 31:2604 32:2502 33:2743 34:3222 35:6846 36:5554]; server map[1:9365 2:6315 3:8763 4:1000 5:7888 6:4980 7:9123 8:1427 9:5476 10:2897 11:2316 12:4202 13:1821 14:1625 15:4060 16:6336 17:4878 18:1240 19:2330 20:6802 21:4658 22:8851 23:9376 24:8045 25:9028 26:9063 27:7765 28:8901 29:2104 30:9174 31:2604 32:2502 33:2743 34:3222 35:6846 36:5554 37:3445 38:8970 39:6721 40:2951 41:8098 42:3660 43:8920 44:1167 45:4497 46:8720 47:9511 48:1064 49:5239 50:6533 51:8011 52:9569 53:4209 54:998 55:4918 56:6126 57:4005]
+2022/10/17 10:00:56 1: log map[1:9365 2:6315 3:8763 4:1000 5:7888 6:4980 7:9123 8:1427 9:5476 10:2897 11:2316 12:4202 13:1821 14:1625 15:4060 16:6336 17:4878 18:1240 19:2330 20:6802 21:4658 22:8851 23:9376 24:8045 25:9028 26:9063 27:7765 28:8901 29:2104 30:9174 31:2604 32:2502 33:2743 34:3222 35:6846 36:5554]; server map[1:9365 2:6315 3:8763 4:1000 5:7888 6:4980 7:9123 8:1427 9:5476 10:2897 11:2316 12:4202 13:1821 14:1625 15:4060 16:6336 17:4878 18:1240 19:2330 20:6802 21:4658 22:8851 23:9376 24:8045 25:9028 26:9063 27:7765 28:8901 29:2104 30:9174 31:2604 32:2502 33:2743 34:3222 35:6846 36:5554 37:3445 38:8970 39:6721 40:2951 41:8098 42:3660 43:8920 44:1167 45:4497 46:8720 47:9511 48:1064 49:5239 50:6533 51:8011 52:9569 53:4209 54:998 55:4918 56:6126 57:4005]
+2022/10/17 10:00:56 apply error: commit index=37 server=1 2412 != server=4 3445
+exit status 1
+FAIL	6.824/raft	7.252s
