@@ -20,7 +20,7 @@ package raft
 import (
 	"bytes"
 	"6.824/labgob"
-
+	"encoding/xml"
 
 	//"debug/elf"
 	"fmt"
@@ -61,6 +61,20 @@ type ApplyMsg struct {
 	SnapshotIndex int
 }
 
+
+type InstallSnapshotArgs struct {
+	Term             int    // 发送请求方的任期
+	LeaderId         int    // 请求方的LeaderId
+	LastIncludeIndex int    // 快照最后applied的日志下标
+	LastIncludeTerm  int    // 快照最后applied时的当前任期
+	Data             []byte // 快照区块的原始字节流数据
+	//Done bool
+}
+
+type InstallSnapshotReply struct {
+	Term int
+}
+
 //
 // A Go object implementing a single Raft peer.
 //
@@ -84,6 +98,9 @@ type Raft struct {
 	applyCh   chan ApplyMsg
 	applyCond *sync.Cond
 	Logs []Entry
+
+	lastIncludeIndex int  //快照包含的最后下标
+	lastIncludeTerm  int  //快照包含的最后任期
 
 	heartBeat     time.Duration  //leader的心跳时间
 	timeout		  time.Duration  //超时时间，超过就开始选举
@@ -113,7 +130,8 @@ const (
 func Make(peers []*labrpc.ClientEnd, me int,
 	persister *Persister, applyCh chan ApplyMsg) *Raft {
 	rf := &Raft{}
-	//rf.mu.Lock()
+
+	rf.mu.Lock()
 
 	rf.peers = peers
 	rf.persister = persister
@@ -144,7 +162,8 @@ func Make(peers []*labrpc.ClientEnd, me int,
 
 	rf.readPersist(persister.ReadRaftState())
 
-	//rf.mu.Unlock()
+	rf.mu.Unlock()
+
 	//rf.Log("Start")
 	// start ticker goroutine to start elections
 	go rf.ticker()
@@ -277,7 +296,7 @@ func (rf* Raft) Applier()  {
 				})
 		}
 
-		//rf.persist()
+		rf.persist()
 
 		rf.mu.Unlock()
 
@@ -309,7 +328,7 @@ func(rf*Raft)  Leaderelection() {
 ////：a）你从当前的领导者那里得到一个AppendEntries RPC（即，如果AppendEntries参数中的任期已经过时，你不应该重启你的计时器）；
 //	//b）你正在开始一个选举；或者c）你授予另一个对等体一个投票。
 func(rf*Raft) Upelection() {
-	t:=time.Duration(150+rand.Intn(200))* time.Millisecond
+	t:=time.Duration(180+rand.Intn(200))* time.Millisecond
 	rf.electiontime=time.Now().Add(t)
 }
 //更新任期
@@ -430,9 +449,12 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 			if rf.tstatue.Votenum>=(len(rf.peers)/2+1){
 
 				rf.tstatue.Votenum=0   //防止多次唤醒
-				rf.Log("Become leader!!!!")
+
 				rf.statue=leader
-				rf.matchIndex[rf.me]=len(rf.Logs)
+				//新leader的matchidx应该是commit还是len log
+				rf.matchIndex[rf.me]=rf.Commitindex
+
+				rf.Log("Become leader!!!! leader loglen %v , leader commit %v",len(rf.Logs),rf.Commitindex)
 				//新leader的next下标应该是最大值，否则从0开始发送，网络负担太大
 				//rf.NextIndex=make([]int,len(rf.peers))
 				rf.Keepalive()
@@ -506,13 +528,7 @@ func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *Appe
 	if ok==false||rf.killed() {
 		return false
 	}
-	/*for !ok{
-		if rf.killed(){
-			return false
-		}
-		//rf.Log("fail send append to %v",server)
-		ok=rf.peers[server].Call("Raft.RequestApp", args, reply)
-	}*/
+
 	//对于leader而言，如果reply的term》leader，说明leader已经过期了
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
@@ -585,7 +601,7 @@ func (rf *Raft) RequestApp(args *AppendEntriesArgs, reply *AppendEntriesReply)  
 		rf.Upelection()
 		//如果节点此时是空日志,判断是否是第一条日志，如果不是返回
 		//第二条日志的preidx和preterm也是0
-		if  len(rf.Logs)==0{
+		if  len(rf.Logs)==0||rf.Commitindex==0{
 			if args.Previogindex!=0||args.Previogierm!=0{  //说明缺失了第一条日志
 				rf.Log("miss the first, my loglen %v , Preidx %v ,Preterm %v",len(rf.Logs),args.Previogindex,args.Previogierm)
 				reply.Success=false
@@ -651,7 +667,7 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 		index := len(rf.Logs) + 1
 		term := rf.term
 		rf.Logs = append(rf.Logs, Entry{Term: term, Command: command})
-		//rf.persist()
+		rf.persist()
 
 		rf.Log("a new log to leader , now leader log len %v",index)
 		return index, term, true
@@ -677,6 +693,9 @@ func (rf *Raft) persist() {
 	// e.Encode(rf.yyy)
 	// data := w.Bytes()
 	// rf.persister.SaveRaftState(data)
+	rf.persister.SaveRaftState(rf.persistdate())
+}
+func (rf *Raft) persistdate() []byte{
 	w := new(bytes.Buffer)
 	e := labgob.NewEncoder(w)
 	e.Encode(rf.term)
@@ -684,10 +703,9 @@ func (rf *Raft) persist() {
 	e.Encode(rf.Commitindex)
 	e.Encode(rf.LastApplied)
 	data := w.Bytes()
-	rf.persister.SaveRaftState(data)
-
+	//rf.persister.SaveRaftState(data)
+	return data
 }
-
 
 //
 // restore previously persisted state.
@@ -701,18 +719,21 @@ func (rf *Raft) readPersist(data []byte) {
 	r := bytes.NewBuffer(data)
 	d := labgob.NewDecoder(r)
 	var currentTerm int
+	//var votenum int
 	var comidx int
 	var appidx int
 	var logs []Entry
 	//var lastIncludeIndex int
 	//var lastIncludeTerm int
 	if d.Decode(&currentTerm) != nil ||
+		//d.Decode(&votenum) != nil ||
 		d.Decode(&logs) != nil ||
 		d.Decode(&comidx) != nil ||
 		d.Decode(&appidx) != nil{
 		rf.Log("Decode error")
 	} else {
 		rf.term = currentTerm
+		//rf.tstatue.Votenum=votenum
 		rf.Logs = logs
 		rf.Commitindex=comidx
 		rf.LastApplied=appidx
@@ -722,6 +743,9 @@ func (rf *Raft) readPersist(data []byte) {
 
 }
 
+
+
+//--------------------------------------------------------快照---------------------------------------------
 
 //
 // A service wants to switch to snapshot.  Only do so if Raft hasn't
@@ -733,6 +757,107 @@ func (rf *Raft) CondInstallSnapshot(lastIncludedTerm int, lastIncludedIndex int,
 
 	return true
 }
+//由领导者调用，向跟随者发送快照的分块。领导者总是按顺序发送分块。
+func (rf *Raft) leaderSendSnapShot(server int) {
+
+	rf.mu.Lock()
+
+	args := InstallSnapshotArgs{
+		rf.term,
+		rf.me,
+		rf.lastIncludeIndex,
+		rf.lastIncludeTerm,
+		rf.persister.ReadSnapshot(),
+	}
+	reply := InstallSnapshotReply{}
+
+	rf.mu.Unlock()
+
+	ok := rf.peers[server].Call("Raft.InstallSnapShot", args, reply)
+
+	if ok == true {
+		rf.mu.Lock()
+		if rf.statue != leader || rf.term != args.Term {
+			rf.mu.Unlock()
+			return
+		}
+
+		// 如果返回的term比自己大说明自身数据已经不合适了
+		if reply.Term > rf.term {
+			rf.statue = follower
+			rf.Updateterm(reply.Term)
+			rf.persist()
+			rf.Upelection()
+			rf.mu.Unlock()
+			return
+		}
+
+		rf.matchIndex[server] = args.LastIncludeIndex
+		rf.NextIndex[server] = args.LastIncludeIndex + 1
+
+		rf.mu.Unlock()
+		return
+	}
+}
+
+// InstallSnapShot RPC Handler
+//您需要实现本文中讨论的InstallSnapshot RPC，
+//它允许Raft领导者告诉滞后的Raft对等方用快照替换其状态。您可能需要仔细考虑InstallSnapshot应该如何与图2中的状态和规则交互。
+
+//当追随者的Raft代码收到InstallSnapshot RPC时，它可以使用applyCh将快照发送到ApplyMsg中的服务。
+//ApplyMsg结构定义已经包含了您需要的字段（以及测试人员需要的字段）。请注意，这些快照只会提升服务的状态，而不会导致服务向后移动。
+
+func (rf *Raft) InstallSnapShot(args *InstallSnapshotArgs, reply *InstallSnapshotReply) {
+	rf.mu.Lock()
+	if rf.term > args.Term {
+		reply.Term = rf.term
+		rf.mu.Unlock()
+		return
+	}
+
+	rf.Updateterm(args.Term)
+
+	reply.Term = args.Term
+
+	rf.persist()
+	rf.Upelection()
+
+	if rf.lastIncludeIndex >= args.LastIncludeIndex {
+		rf.mu.Unlock()
+		return
+	}
+
+	// 将快照后的logs切割，快照前的直接applied
+	index := args.LastIncludeIndex
+	tempLog := make([]Entry, 0)
+	tempLog = append(tempLog, Entry{})
+
+	for i := index + 1; i <= rf.getLastIndex(); i++ {
+		tempLog = append(tempLog, rf.restoreLog(i))
+	}
+
+	rf.lastIncludeTerm = args.LastIncludeTerm
+	rf.lastIncludeIndex = args.LastIncludeIndex
+
+	rf.Logs = tempLog
+	if index > rf.Commitindex {
+		rf.Commitindex = index
+	}
+	if index > rf.LastApplied {
+		rf.lastIncludeIndex = index
+	}
+	rf.persister.SaveStateAndSnapshot(rf.persistdate(), args.Data)
+
+	msg := ApplyMsg{
+		SnapshotValid: true,
+		Snapshot:      args.Data,
+		SnapshotTerm:  rf.lastIncludeTerm,
+		SnapshotIndex: rf.lastIncludeIndex,
+	}
+	rf.mu.Unlock()
+	rf.applyCh <-msg
+
+}
 
 // the service says it has created a snapshot that has
 // all info up to and including index. this means the
@@ -740,6 +865,45 @@ func (rf *Raft) CondInstallSnapshot(lastIncludedTerm int, lastIncludedIndex int,
 // that index. Raft should now trim its log as much as possible.
 func (rf *Raft) Snapshot(index int, snapshot []byte) {
 	// Your code here (2D).
+	if rf.killed() {
+		return
+	}
+
+	rf.mu.Lock()
+	defer rf.mu.Unlock()
+	// 如果下标大于自身的提交，说明没被提交不能安装快照，如果自身快照点大于index说明不需要安装
+	//fmt.Println("[Snapshot] commintIndex", rf.commitIndex)
+	if rf.lastIncludeIndex >= index || index > rf.Commitindex {
+		return
+	}
+	// 更新快照日志
+	sLogs := make([]Entry, 0)
+	sLogs = append(sLogs, Entry{})
+	for i := index + 1; i <= len(rf.Logs); i++ {
+		sLogs = append(sLogs, rf.restoreLog(i))
+	}
+
+	//fmt.Printf("[Snapshot-Rf(%v)]rf.commitIndex:%v,index:%v\n", rf.me, rf.commitIndex, index)
+	// 更新快照下标/任期
+	if index == len(rf.Logs)+1 {
+		rf.lastIncludeTerm = rf.Logs[len(rf.Logs)-1].Term
+	} else {
+		rf.lastIncludeTerm = rf.restoreLogTerm(index)
+	}
+
+	rf.lastIncludeIndex = index
+	rf.Logs = sLogs
+
+	// apply了快照就应该重置commitIndex、lastApplied
+	if index > rf.Commitindex {
+		rf.Commitindex = index
+	}
+	if index > rf.LastApplied {
+		rf.LastApplied = index
+	}
+
+	// 持久化快照信息
+	rf.persister.SaveStateAndSnapshot(rf.persistdate(), snapshot)
 
 }
 
