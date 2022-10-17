@@ -225,7 +225,7 @@ func (rf *Raft) ticker() {
 
 	for rf.killed() == false {
 
-		time.Sleep(30 * time.Millisecond)
+		time.Sleep(45 * time.Millisecond)
 
 		rf.mu.Lock()
 
@@ -432,6 +432,7 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 				rf.tstatue.Votenum=0   //防止多次唤醒
 				rf.Log("Become leader!!!!")
 				rf.statue=leader
+				rf.matchIndex[rf.me]=len(rf.Logs)
 				//新leader的next下标应该是最大值，否则从0开始发送，网络负担太大
 				//rf.NextIndex=make([]int,len(rf.peers))
 				rf.Keepalive()
@@ -536,7 +537,11 @@ func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *Appe
 			if len(rf.Logs)==0{
 				return true
 			}
-			rf.Commitindex=len(rf.Logs)
+			if  rf.matchIndex[server]>rf.matchIndex[rf.me]{
+				rf.matchIndex[rf.me]=rf.matchIndex[server]
+			}
+			rf.Commitindex=rf.matchIndex[rf.me]
+
 			//对于leader而言，只要通过半数就可提交了
 
 			rf.Log("Leader Commited %v",rf.Commitindex)
