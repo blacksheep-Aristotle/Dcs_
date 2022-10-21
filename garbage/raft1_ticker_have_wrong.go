@@ -1,4 +1,4 @@
-package raft
+//package raft
 
 //
 // this is an outline of the API that raft must expose to

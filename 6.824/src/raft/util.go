@@ -1,21 +1,36 @@
 package raft
 
 import (
-	"log"
+	"fmt"
 	"math/rand"
 	"time"
 )
 
-// Debugging
-const Debug = false
+const RaftPrint = true
+//运行时间 peer id号 （状态：0-follower 1-candidate 2-leader） 任期
+func(rf *Raft) Log(format string,a ...interface{}) {
 
-func DPrintf(format string, a ...interface{}) (n int, err error) {
-	if Debug {
-		log.Printf(format, a...)
+	if RaftPrint {
+		format = "%v: [peer %v (%v) at Term %v] " + format + "\n"
+		a = append([]interface{}{time.Now().Sub(rf.timeBegin).Milliseconds(), rf.me, rf.statue, rf.term}, a...)
+		fmt.Printf(format, a...)
 	}
-	return
 }
 
+func Min(x int, y int) int {
+	if x<y{
+		return  x
+	}else {
+		return y
+	}
+}
+func Max(x int,y int) int {
+	if x>y {
+		return x
+	}else {
+		return y
+	}
+}
 func (rf* Raft) restoreindex(curIndex int) int {
 	return curIndex-rf.lastIncludeIndex
 }
@@ -27,7 +42,7 @@ func (rf *Raft) restoreLog(curIndex int) Entry {
 // 通过快照偏移还原真实日志任期
 func (rf *Raft) restoreLogTerm(curIndex int) int {
 	// 如果当前index与快照一致/日志为空，直接返回快照/快照初始化信息，否则根据快照计算
-	if curIndex-rf.lastIncludeIndex == 0 {
+	if curIndex==rf.lastIncludeIndex {
 		return rf.lastIncludeTerm
 	}
 	//fmt.Printf("[GET] curIndex:%v,rf.lastIncludeIndex:%v\n", curIndex, rf.lastIncludeIndex)
@@ -51,9 +66,9 @@ func (rf *Raft) getLastTerm() int {
 
 // 通过快照偏移还原真实PrevLogInfo
 func (rf *Raft) getPrevLogInfo(server int) (int, int) {
-	newEntryBeginIndex := rf.NextIndex[server] - 1
+	newEntryBeginIndex := Max(rf.NextIndex[server] - 1,0)
 	lastIndex := rf.getLastIndex()
-	if newEntryBeginIndex == lastIndex+1 {
+	if newEntryBeginIndex >= lastIndex+1 {
 		newEntryBeginIndex = lastIndex
 	}
 	return newEntryBeginIndex, rf.restoreLogTerm(newEntryBeginIndex)

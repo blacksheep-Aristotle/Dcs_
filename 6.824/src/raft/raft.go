@@ -20,10 +20,7 @@ package raft
 import (
 	"bytes"
 	"6.824/labgob"
-	"go/ast"
 
-	//"debug/elf"
-	"fmt"
 	"math/rand"
 	//"unicode"
 
@@ -246,7 +243,7 @@ func (rf *Raft) ticker() {
 
 	for rf.killed() == false {
 
-		time.Sleep(rf.heartBeat * time.Millisecond)
+		time.Sleep(40 * time.Millisecond)
 
 		rf.mu.Lock()
 
@@ -422,7 +419,7 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 
 				ll:=rf.getLastIndex()
 				for i := range rf.peers  {
-					rf.NextIndex[i]=ll
+					rf.NextIndex[i]=ll+1
 				}
 				rf.matchIndex[rf.me]=ll
 
@@ -459,9 +456,13 @@ func (rf* Raft) Keepalive()  {
 
 			args.Previogindex,args.Previogierm=rf.getPrevLogInfo(i)
 
-			entries := make([]Entry, 0)
-			entries = append(entries,rf.Logs[rf.restoreindex(args.Previogindex):]...)
-			args.Entries=entries
+			//如果要发送的日志在快照里，发送快照
+			if rf.lastIncludeIndex>=rf.NextIndex[i] {
+
+			}else if rf.getLastIndex()>=rf.NextIndex[i]{    //如果要发送的日志不在快照且在范围内
+				entries := make([]Entry, 0)
+				entries = append(entries,rf.Logs[rf.restoreindex(rf.NextIndex[i]):]...)
+			}
 			//将节点缺失的日志一次性全发出去！！！而不是等到服务端一次次回滚
 			//如果nextIndex[i]长度不等于rf.logs,代表与leader的log entries不一致，需要附带过去
 
@@ -535,13 +536,7 @@ func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *Appe
 func (rf *Raft) RequestApp(args *AppendEntriesArgs, reply *AppendEntriesReply)  {
 
 	//rf.Log("receive a keep-alive from leader %v which term %v",args.Leaderid,args.Term)
-	Min := func(x int, y int) int {
-		if x<y{
-			return  x
-		}else {
-			return y
-		}
-	}
+
 
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
@@ -565,12 +560,27 @@ func (rf *Raft) RequestApp(args *AppendEntriesArgs, reply *AppendEntriesReply)  
 			// 如果存在日志包那么进行追加
 			if args.Entries != nil {
 
-				rf.Logs = append(rf.Logs[:args.Previogindex+1-rf.lastIncludeIndex], args.Entries...)
+				/*firstIndex := rf.lastIncludeIndex
+				//找到第一个冲突日志
+				tmpidx :=args.Previogindex+1
+				for index,e := range args.Entries{
+					if rf.restoreLogTerm(tmpidx)!=e.Term {
+						rf.Logs = append(rf.Logs[:args.Previogindex+1-rf.lastIncludeIndex], args.Entries...)
+					}
+				}
+				for index, entry := range args.Entries {
+					if tmpidx-firstIndex >= len(rf.Logs) || rf.Logs[entry.Index-firstIndex].Term != entry.Term {
+						rf.Logs = shrinkEntriesArray(append(rf.logs[:entry.Index-firstIndex], request.Entries[index:]...))
+						break
+					}
+				}*/
+
+				rf.Logs = append(rf.Logs[:args.Previogindex-rf.lastIncludeIndex], args.Entries...)
 			}
 
 			rf.Commitindex=Min(rf.getLastIndex(),args.Ladercommit)
 
-			rf.Log("accept the log now index %v, peer have commit %v",len(rf.Logs),rf.Commitindex)
+			rf.Log("accept the log now lastlog index %v, peer have commit %v",rf.getLastIndex(),rf.Commitindex)
 			reply.Success=true
 		} else {
 
@@ -615,8 +625,8 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 		term := rf.term
 		rf.Logs = append(rf.Logs, Entry{Term: term, Command: command})
 		index:=rf.getLastIndex()
-		rf.persist()
-		rf.Log("a new log to leader , now leader log len %v",index)
+		//rf.persist()
+		rf.Log("a new log to leader , now leader lastlog index %v",index)
 		return index, term, true
 	}
 
@@ -893,13 +903,3 @@ func (rf *Raft) killed() bool {
 // for any long-running work.
 //
 
-const RaftPrint = true
-//运行时间 peer id号 （状态：0-follower 1-candidate 2-leader） 任期
-func(rf *Raft) Log(format string,a ...interface{}) {
-
-	if RaftPrint {
-		format = "%v: [peer %v (%v) at Term %v] " + format + "\n"
-		a = append([]interface{}{time.Now().Sub(rf.timeBegin).Milliseconds(), rf.me, rf.statue, rf.term}, a...)
-		fmt.Printf(format, a...)
-	}
-}
