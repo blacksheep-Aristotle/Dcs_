@@ -445,6 +445,9 @@ func (rf* Raft) Keepalive()  {
 	var num=1
 	for i:=0;i< len(rf.peers);i++{
 		if i!=rf.me{
+
+			reply:=AppendEntriesReply{}
+
 			args:=AppendEntriesArgs{
 				Term: rf.term,
 				Leaderid:rf.me,
@@ -459,15 +462,70 @@ func (rf* Raft) Keepalive()  {
 			//如果要发送的日志在快照里，发送快照
 			if rf.lastIncludeIndex>=rf.NextIndex[i] {
 
+				//go 	rf.leaderSendSnapShot(i)
+				continue
 			}else if rf.getLastIndex()>=rf.NextIndex[i]{    //如果要发送的日志不在快照且在范围内
+				tmp:=rf.restoreindex(rf.NextIndex[i])
 				entries := make([]Entry, 0)
-				entries = append(entries,rf.Logs[rf.restoreindex(rf.NextIndex[i]):]...)
+				entries = append(entries,rf.Logs[tmp:]...)
+				rf.Log("send log entries size %v",len(entries))
 			}
 			//将节点缺失的日志一次性全发出去！！！而不是等到服务端一次次回滚
 			//如果nextIndex[i]长度不等于rf.logs,代表与leader的log entries不一致，需要附带过去
+			go func(i int) {
+				ok := rf.peers[server].Call("Raft.RequestApp", args, reply)
+				if ok==false||rf.killed() {
+					return
+				}
 
-			reply:=AppendEntriesReply{}
-			go rf.sendAppendEntry(i,&args,&reply,&num)
+				//对于leader而言，如果reply的term》leader，说明leader已经过期了
+				rf.mu.Lock()
+				defer rf.mu.Unlock()
+
+				if reply.Term>rf.term{
+					rf.statue=follower
+					rf.Updateterm(reply.Term)
+					rf.Log("Higher append reply , become follower")
+					return
+				}
+				if rf.statue!=leader{
+					return
+				}
+				if reply.Success{  //如果时reply success，那么所有节点的日志都应该是一样的，因为leader会将冲突到最新的节点一次性发送
+					//这里有bug，如果是keeepalive，那么args.Entries=0,所以应该是+而不是=
+					rf.matchIndex[i]=args.Previogindex+len(args.Entries)  //可能会一次提交多条日志
+					rf.NextIndex[i] = rf.matchIndex[i] + 1
+					rf.Log("peer %v accept append which waht %v",i,rf.NextIndex[i],args.Previogindex)
+					num++
+					if num >= len(rf.peers)/2+1{
+						num=0  //保证不会提交两次！！
+						if len(rf.Logs)==0{
+							return
+						}
+						if  rf.matchIndex[i]>rf.matchIndex[rf.me]{
+
+							rf.matchIndex[rf.me]=rf.matchIndex[i]
+							upidx:=rf.matchIndex[rf.me]
+
+							if rf.Logs[upidx].Term==rf.term {
+								rf.Commitindex=upidx
+								rf.Log("Leader Commited %v",rf.Commitindex)
+							}else {
+								rf.Log("Leader Commited failde beacuse log.term %v are not now term %v",rf.Logs[upidx].Term,rf.term)
+							}
+						}
+						//leader只能提交当前任期的日志！！
+						//对于leader而言，只要通过半数就可提交了
+
+					}
+				}else {
+
+					rf.NextIndex[i]=reply.Upnextindex
+					rf.Log("peer %v refused ,which want %v",server,reply.Upnextindex)
+				}
+			}(i)
+
+			//go rf.sendAppendEntry(i,&args,&reply,&num)
 		}
 	}
 }
@@ -498,7 +556,7 @@ func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *Appe
 		//这里有bug，如果是keeepalive，那么args.Entries=0,所以应该是+而不是=
 		rf.matchIndex[server]=args.Previogindex+len(args.Entries)  //可能会一次提交多条日志
 		rf.NextIndex[server] = rf.matchIndex[server] + 1
-		rf.Log("peer %v accept append which waht %v",server,rf.NextIndex[server])
+		rf.Log("peer %v accept append which waht %v Pre %v",server,rf.NextIndex[server],args.Previogindex)
 		*num++
 		if *num >= len(rf.peers)/2+1{
 			*num=0  //保证不会提交两次！！
@@ -506,10 +564,12 @@ func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *Appe
 				return true
 			}
 			if  rf.matchIndex[server]>rf.matchIndex[rf.me]{
+
 				rf.matchIndex[rf.me]=rf.matchIndex[server]
-				upidx:=rf.matchIndex[rf.me]-1
+				upidx:=rf.matchIndex[rf.me]
+
 				if rf.Logs[upidx].Term==rf.term {
-					rf.Commitindex=upidx+1
+					rf.Commitindex=upidx
 					rf.Log("Leader Commited %v",rf.Commitindex)
 				}else {
 					rf.Log("Leader Commited failde beacuse log.term %v are not now term %v",rf.Logs[upidx].Term,rf.term)
@@ -520,12 +580,9 @@ func (rf *Raft) sendAppendEntry(server int, args *AppendEntriesArgs, reply *Appe
 
 		}
 	}else {
+
+		rf.NextIndex[server]=reply.Upnextindex
 		rf.Log("peer %v refused ,which want %v",server,reply.Upnextindex)
-		if rf.NextIndex[server]<=rf.lastIncludeIndex {
-			go rf.leaderSendSnapShot(server)
-		}else {
-			rf.NextIndex[server]=reply.Upnextindex
-		}
 	}
 
 	return reply.Success
@@ -574,8 +631,8 @@ func (rf *Raft) RequestApp(args *AppendEntriesArgs, reply *AppendEntriesReply)  
 						break
 					}
 				}*/
-
-				rf.Logs = append(rf.Logs[:args.Previogindex-rf.lastIncludeIndex], args.Entries...)
+				//+1是因为切片末尾-1
+				rf.Logs = append(rf.Logs[:args.Previogindex+1-rf.lastIncludeIndex], args.Entries...)
 			}
 
 			rf.Commitindex=Min(rf.getLastIndex(),args.Ladercommit)
@@ -587,11 +644,11 @@ func (rf *Raft) RequestApp(args *AppendEntriesArgs, reply *AppendEntriesReply)  
 			conflicidx:=0
 			if args.Previogindex>rf.getLastIndex(){
 				conflicidx=rf.getLastIndex()+1
-			}else if args.Previogindex<=rf.lastIncludeIndex {
+			}else if args.Previogindex<rf.lastIncludeIndex {
 				conflicidx=rf.lastIncludeIndex+1
 			} else{
 				tempTerm := rf.restoreLogTerm(args.Previogindex)
-				//但是任期不匹配，它应该返回conflictTerm = log[prevLogIndex].Term，然后在其日志中搜索其条目中任期等于conflictTerm的第一个索引。
+				//我在这任期出问题了，返回这个任期内的第一个索引
 				for index := args.Previogindex; index > rf.lastIncludeIndex; index-- {
 					if rf.restoreLogTerm(index) != tempTerm {
 						conflicidx= index+1
@@ -600,7 +657,7 @@ func (rf *Raft) RequestApp(args *AppendEntriesArgs, reply *AppendEntriesReply)  
 				}
 			}
 
-			reply.Upnextindex=conflicidx  //返回的应该是commited了
+			reply.Upnextindex=Max(conflicidx,rf.lastIncludeIndex+1)  //返回的应该是commited了
 			reply.Success=false
 			rf.Log("log append false, I want %v but accept a log after Previogindex %v",reply.Upnextindex,args.Previogindex)
 		}

@@ -161,7 +161,7 @@ func (rf *Raft) changeStateWithoutLock(targetState int) {
 		rf.currentState = targetState
 	}
 }
-
+//丢弃到lastindex的日志
 func (rf *Raft) shrinkLogWithoutLock(remainLog []Entry, lastIndex int, lastTerm int) []Entry {
 	newLog := make([]Entry, len(remainLog)+1)
 	newLog[0] = Entry{
