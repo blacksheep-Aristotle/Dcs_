@@ -7,13 +7,15 @@ import (
 	"reflect"
 	"strings"
 )
+
+
 import "crypto/rand"
 import "math/big"
 
 
 type Clerk struct {
 	servers []*labrpc.ClientEnd
-	ClerkId int
+	ClerkId int64
 	CommentId int
 	LeaderId int
 	// You will have to modify this struct.
@@ -51,6 +53,9 @@ func MakeClerk(servers []*labrpc.ClientEnd) *Clerk {
 // arguments. and reply must be passed as a pointer.
 //
 func (ck *Clerk) Get(key string) string {
+
+
+Retry:
 	args:=GetArgs{
 		key,
 		ck.CommentId,
@@ -62,7 +67,7 @@ func (ck *Clerk) Get(key string) string {
 		return  reply.Value
 	}else if reply.Err==ErrWrongLeader{
 		ck.LeaderId=reply.LeaderId
-		return ck.Get(key)
+		goto Retry
 	}else if reply.Err==ErrNoKey{
 		return ""
 	}
@@ -81,6 +86,8 @@ func (ck *Clerk) Get(key string) string {
 //
 func (ck *Clerk) PutAppend(key string, value string, op string) {
 	// You will have to modify this function.
+
+Retry:
 	args:=PutAppendArgs{
 		key,
 		value,
@@ -94,8 +101,7 @@ func (ck *Clerk) PutAppend(key string, value string, op string) {
 		return
 	}else if reply.Err==ErrWrongLeader{
 		ck.LeaderId=reply.LeaderId
-		ck.PutAppend(key,value,op)
-		return
+		goto Retry
 	}
 }
 

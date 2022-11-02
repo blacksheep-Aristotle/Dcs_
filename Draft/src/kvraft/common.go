@@ -1,47 +1,66 @@
 package kvraft
 
 import (
+	"fmt"
 	"sync"
 	"time"
 )
+
+
+type ClientOperation struct {
+	SequenceNum int
+	Result ChanResult
+}
+
+
+type ChanResult struct {
+	value string
+	Err Err
+}
 
 type Err string
 const (
 	OK             = "OK"
 	ErrNoKey       = "ErrNoKey"
 	ErrWrongLeader = "ErrWrongLeader"
+	ErrTimeout     = "ErrTimeout"
 )
 
-type op string{
-	Append ="Append"
-	Put ="Put"
-}
+
 // Put or Append
 type PutAppendArgs struct {
 	Key   string
 	Value string
-	Op    string // "Put" or "Append"
-	ClerkId int
+	Op    op // "Put" or "Append"
+	ClerkId int64
 	CommId int
 	// You'll have to add definitions here.
 	// Field names must start with capital letters,
 	// otherwise RPC will break.
 }
+type  op int
+const (
+	Put op = iota
+	Append
+)
 
 type PutAppendReply struct {
-	Err Err
+	Err   Err
+	Statue bool
+	Value string
 	LeaderId int
 }
 
 type GetArgs struct {
 	Key string
 	CommId int
-	ClerkId int
+	ClerkId int64
 	// You'll have to add definitions here.
 }
 
 type GetReply struct {
 	Err   Err
+	Statue bool
 	Value string
 	LeaderId int
 }
@@ -97,4 +116,47 @@ func (s *Snowflake) NextVal() int64 {
 	r := int64((t)<<timestampShift | (s.datacenterid << datacenteridShift) | (s.workerid << workeridShift) | (s.sequence))
 	s.Unlock()
 	return r
+}
+
+type KVStateMachine interface {
+	Get(key string) (string, Err)
+	Put(key, value string) Err
+	Append(key, value string) Err
+}
+
+type MemoryKV struct {
+	KV map[string]string
+}
+
+func NewMemoryKV() *MemoryKV {
+	return &MemoryKV{make(map[string]string)}
+}
+
+func (memoryKV *MemoryKV) Get(key string) (string, Err) {
+	if value, ok := memoryKV.KV[key]; ok {
+		return value, OK
+	}
+	return "", ErrNoKey
+}
+
+func (memoryKV *MemoryKV) Put(key, value string) Err {
+	memoryKV.KV[key] = value
+	return OK
+}
+
+func (memoryKV *MemoryKV) Append(key, value string) Err {
+	memoryKV.KV[key] += value
+	return OK
+}
+
+
+const Kvraft = true
+//运行时间 peer id号 （状态：0-follower 1-candidate 2-leader） 任期
+func(kv *KVServer) Log(format string,a ...interface{}) {
+
+	if Kvraft {
+		format = "%v: [peer %v (%v) at Term %v] " + format + "\n"
+		a = append([]interface{}{kv.me}, a...)
+		fmt.Printf(format, a...)
+	}
 }

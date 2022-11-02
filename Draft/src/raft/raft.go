@@ -234,6 +234,12 @@ func (rf *Raft) GetState() (int, bool) {
 	return term, isleader
 }
 
+func (rf*Raft) Getleader() int  {
+	if rf.killed() {
+		return -1
+	}
+	return rf.leaderid
+}
 //--------------------------------------------------------ticker() and worker()---------------------------------------------
 
 //ticker会以心跳为周期不断检查状态。如果当前是Leader就会发送心跳包，而心跳包是靠appendEntries()发送空log

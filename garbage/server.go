@@ -1,3 +1,4 @@
+
 package kvraft
 
 import (
@@ -36,12 +37,12 @@ type KVServer struct {
 
 type ClientOperation struct {
 	SequenceNum int
-	Response string
+	Value string
 	Err Err
 }
 
 type ChanResult struct {
-	response string
+	Value string
 	Err Err
 }
 
@@ -52,6 +53,7 @@ type PersistData struct {
 
 func (kv *KVServer) HandleCommand(args *ClientRequestArgs, reply *ClientRequestReply) {
 	kv.mu.Lock()
+
 	if kv.isDuplicateRequestWithoutLock(args.ClientId, args.SequenceNum) {
 		reply.Status = true
 		clientOperation := kv.lastClientOperation[args.ClientId]
@@ -104,7 +106,7 @@ func (kv *KVServer) HandleCommand(args *ClientRequestArgs, reply *ClientRequestR
 		kv.mu.Unlock()
 	}()
 }
-
+//创建通知管道
 func (kv *KVServer)	createNotifyChan(index int) chan ChanResult {
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
@@ -113,12 +115,13 @@ func (kv *KVServer)	createNotifyChan(index int) chan ChanResult {
 	return res
 }
 
+//向通知管道写结果
 func (kv *KVServer) saveNotifyChanWithoutLock(index int, res ChanResult) {
 	if value, ok := kv.notifyChans[index]; ok {
 		value <- res
 	}
 }
-
+//是否是最后一个日志
 func (kv *KVServer) isDuplicateRequestWithoutLock(clientId int64, sequenceNum int) bool {
 	if value, ok := kv.lastClientOperation[clientId]; ok {
 		if value.SequenceNum == sequenceNum {
@@ -127,7 +130,7 @@ func (kv *KVServer) isDuplicateRequestWithoutLock(clientId int64, sequenceNum in
 	}
 	return false
 }
-
+//是否超界
 func (kv *KVServer) isOutdatedRequestWithoutLock(clientId int64, sequenceNum int) bool {
 	if value, ok := kv.lastClientOperation[clientId]; ok {
 		if value.SequenceNum > sequenceNum {
@@ -136,7 +139,7 @@ func (kv *KVServer) isOutdatedRequestWithoutLock(clientId int64, sequenceNum int
 	}
 	return false
 }
-
+//保存client最后结果
 func (kv *KVServer) saveClientRequestReplyWithoutLock(clientId int64, sequenceNum int, response string, err Err) {
 	kv.lastClientOperation[clientId] = ClientOperation{
 		SequenceNum: sequenceNum,
@@ -144,7 +147,7 @@ func (kv *KVServer) saveClientRequestReplyWithoutLock(clientId int64, sequenceNu
 		Err:         err,
 	}
 }
-
+//是否需要压缩
 func (kv *KVServer) needSnapshotWithoutLock() bool {
 	if kv.maxraftstate != -1 && kv.persister.RaftStateSize() >= kv.maxraftstate {
 		return true
@@ -152,7 +155,7 @@ func (kv *KVServer) needSnapshotWithoutLock() bool {
 		return false
 	}
 }
-
+//通知rfat压缩
 func (kv *KVServer) takeSnapshotWithoutLock(index int) {
 	w := new(bytes.Buffer)
 	e := labgob.NewEncoder(w)
@@ -201,7 +204,7 @@ func (kv *KVServer) killed() bool {
 	return z == 1
 }
 
-
+//从状态机读数据
 func (kv *KVServer) executeDbCommandWithoutLock(command Command) (string, Err) {
 	if command.Op == OpRead {
 		return kv.db.get(command.Key)
@@ -215,7 +218,7 @@ func (kv *KVServer) executeDbCommandWithoutLock(command Command) (string, Err) {
 		return "", ErrNone
 	}
 }
-
+//将commit的日志添加到状态机中
 func (kv *KVServer) applier() {
 	for kv.killed() == false {
 		select {
@@ -232,11 +235,13 @@ func (kv *KVServer) applier() {
 						chanResult.Err = clientOperation.Err
 						logPrint("%v: %v-%v is duplicate request in apply msg, return directly", kv.me, args.ClientId, args.SequenceNum)
 					} else {
+						//将日志写入状态机
 						response, err := kv.executeDbCommandWithoutLock(args.Command)
 						kv.lastApplied = applyMsg.CommandIndex
 						chanResult.response = response
 						chanResult.Err = err
 						logPrint("KV %v: Execute db command %+v, index: %v", kv.me, args.Command, applyMsg.CommandIndex)
+						//将结果写入最后一个
 						kv.saveClientRequestReplyWithoutLock(args.ClientId, args.SequenceNum, response, err)
 					}
 
