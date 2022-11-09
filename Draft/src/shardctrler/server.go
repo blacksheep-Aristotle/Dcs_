@@ -15,14 +15,24 @@ type ShardCtrler struct {
 
 	// Your data here.
 
-	configs []Config // indexed by config num
+	configs []Config // indexed by config num,num:分片id
+
 }
 
 
 type Op struct {
 	// Your data here.
+	ClientId int64
+	CommandId int
+	Optype   Optype
 }
-
+type Optype	string
+const(
+	Query  = "Query"
+	Join = "Join"
+	Leave ="Leave"
+	Move = "Move"
+)
 
 func (sc *ShardCtrler) Join(args *JoinArgs, reply *JoinReply) {
 	// Your code here.
@@ -38,6 +48,8 @@ func (sc *ShardCtrler) Move(args *MoveArgs, reply *MoveReply) {
 
 func (sc *ShardCtrler) Query(args *QueryArgs, reply *QueryReply) {
 	// Your code here.
+	Optype()
+
 }
 
 

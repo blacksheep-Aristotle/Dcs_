@@ -105,28 +105,37 @@ func (kv *KVServer) PutAppend(args *PutAppendArgs, reply *PutAppendReply) {
 		reply.Err = ErrWrongLeader
 		return
 	}
+
 	if kv.Isrepeat(args.ClerkId,args.CommId) {
 		reply.Statue=true
 		reply.Value,reply.Err = kv.Db.Get(args.Key)
 		return
 	}
 
-	_,flag := kv.rf.GetState()
+	op := Op{OpType: "Get", Key: args.Key,Commid: args.CommId, ClientId: args.ClerkId}
+	lastindex,_,isleader:=kv.rf.Start(op)
 
-	if !flag {
+
+	if  isleader==false{
 		reply.Err=ErrWrongLeader
 		reply.Statue=false
 		reply.LeaderId=kv.rf.Getleader()
 		return
 	}
-	op := Op{OpType: "Get", Key: args.Key,Commid: args.CommId, ClientId: args.ClerkId}
-	lastindex,_,_:=kv.rf.Start(op)
 
 	timer := time.NewTicker(100 * time.Millisecond)
+	//为该日志注册信号，当raft集群提交该日志时，将结果返回给server
+	//返回value和err
 	notice := kv.createNotifyChan(lastindex)
 
 	select {
 	case res:=<-notice:
+		//Bug:相同的index，但是日志不一样！！！
+		if op.Commid!=res.Comid || op.ClientId!=res.Clerkid {
+			reply.Err=ErrWrongLeader
+			reply.Statue=false
+			return
+		}
 		reply.Err=res.Err
 		reply.Value=res.value
 		reply.Statue=true
@@ -135,6 +144,7 @@ func (kv *KVServer) PutAppend(args *PutAppendArgs, reply *PutAppendReply) {
 		reply.Statue=false
 	}
 }
+
 //创造一个通知协程，当applier写入了对应index的下标，
 func (kv *KVServer)	createNotifyChan(index int) chan ChanResult {
 	kv.mu.Lock()
@@ -188,7 +198,7 @@ func (kv* KVServer) Applier()  {
 					var err Err
 					kv.lastindex=msg.CommandIndex
 					command:=msg.Command.(Op)
-					//如果已经提交到状态机里了
+					//如果没有经提交到状态机里
 					if !kv.Isrepeat(command.ClientId,command.Commid) {
 						switch command.OpType {
 							case New:
@@ -241,8 +251,7 @@ func (kv *KVServer) DecodeSnapShot(snapshot []byte) {
 		kv.kvPersist = kvPersist
 		kv.seqMap = seqMap
 	} else {
-		fmt.Printf("[Server(%v)] Failed to decode snapshot！！！", kv.me)
-
+		DPrintf("[Server(%v)] Failed to decode snapshot！！！", kv.me)
 	}
 }
 
@@ -372,6 +381,8 @@ func StartKVServer(servers []*labrpc.ClientEnd, me int, persister *raft.Persiste
 	kv.rf = raft.Make(servers, me, persister, kv.applyCh)
 
 	// You may need initialization code here.
+
+	go kv.applier()
 
 	return kv
 }

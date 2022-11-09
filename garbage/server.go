@@ -50,10 +50,10 @@ type PersistData struct {
 	Db *KvDb
 	LastClientOperation map[int64]ClientOperation
 }
-
+//处理client请求
 func (kv *KVServer) HandleCommand(args *ClientRequestArgs, reply *ClientRequestReply) {
 	kv.mu.Lock()
-
+	//如果重复了，返回重复的
 	if kv.isDuplicateRequestWithoutLock(args.ClientId, args.SequenceNum) {
 		reply.Status = true
 		clientOperation := kv.lastClientOperation[args.ClientId]
@@ -63,7 +63,7 @@ func (kv *KVServer) HandleCommand(args *ClientRequestArgs, reply *ClientRequestR
 		kv.mu.Unlock()
 		return
 	}
-
+	//如果不在状态机里
 	if kv.isOutdatedRequestWithoutLock(args.ClientId, args.SequenceNum) {
 		reply.Status = false
 		reply.Response = ""
@@ -204,7 +204,7 @@ func (kv *KVServer) killed() bool {
 	return z == 1
 }
 
-//从状态机读数据
+//操作状态机
 func (kv *KVServer) executeDbCommandWithoutLock(command Command) (string, Err) {
 	if command.Op == OpRead {
 		return kv.db.get(command.Key)
@@ -251,6 +251,7 @@ func (kv *KVServer) applier() {
 				}
 
 				// you need to check term
+				//如果是leader：通知信道
 				if currentTerm, isLeader := kv.rf.GetState(); isLeader && currentTerm == applyMsg.CommandTerm {
 					kv.saveNotifyChanWithoutLock(applyMsg.CommandIndex, chanResult)
 				}

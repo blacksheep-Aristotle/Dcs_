@@ -618,7 +618,8 @@ func (rf *Raft) RequestApp(args *AppendEntriesArgs, reply *AppendEntriesReply)  
 		//收到心跳包
 		rf.Upelection()
 
-		if (args.Previogindex>=rf.lastIncludeIndex&& args.Previogindex<=rf.getLastIndex()&&rf.restoreLogTerm(args.Previogindex)==args.Previogierm){
+		if (args.Previogindex>=rf.lastIncludeIndex&& args.Previogindex<=rf.getLastIndex()&&
+			rf.restoreLogTerm(args.Previogindex)==args.Previogierm){
 
 			// 如果存在日志包那么进行追加
 			if args.Entries != nil {

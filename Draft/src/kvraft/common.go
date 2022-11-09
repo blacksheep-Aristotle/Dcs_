@@ -15,6 +15,8 @@ type ClientOperation struct {
 
 type ChanResult struct {
 	value string
+	Comid int
+	Clerkid int64
 	Err Err
 }
 

@@ -22,20 +22,30 @@ const NShards = 10
 
 // A configuration -- an assignment of shards to groups.
 // Please don't change this.
+//保存了分片和分组的映射
 type Config struct {
 	Num    int              // config number
 	Shards [NShards]int     // shard -> gid
 	Groups map[int][]string // gid -> servers[]
 }
-
+type Err string
 const (
 	OK = "OK"
 )
 
-type Err string
+
+type Configsinfo struct {
+	configs []Config
+}
+
+type Log struct {
+	ClerkId int64
+	CommandId int
+}
 
 type JoinArgs struct {
 	Servers map[int][]string // new GID -> servers mappings
+	Log Log
 }
 
 type JoinReply struct {
@@ -45,6 +55,7 @@ type JoinReply struct {
 
 type LeaveArgs struct {
 	GIDs []int
+	Log Log
 }
 
 type LeaveReply struct {
@@ -55,6 +66,7 @@ type LeaveReply struct {
 type MoveArgs struct {
 	Shard int
 	GID   int
+	Log Log
 }
 
 type MoveReply struct {
@@ -64,10 +76,12 @@ type MoveReply struct {
 
 type QueryArgs struct {
 	Num int // desired config number
+	Log Log
 }
 
 type QueryReply struct {
 	WrongLeader bool
 	Err         Err
 	Config      Config
+	LeaderId 	int
 }

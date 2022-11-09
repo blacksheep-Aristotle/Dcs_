@@ -70,6 +70,8 @@ Retry:
 		goto Retry
 	}else if reply.Err==ErrNoKey{
 		return ""
+	}else if reply.Err==ErrTimeout{   //超时说明没有raft集群太久没有达成共识
+		goto Retry
 	}
 	return ""
 }
@@ -102,13 +104,17 @@ Retry:
 	}else if reply.Err==ErrWrongLeader{
 		ck.LeaderId=reply.LeaderId
 		goto Retry
+	}else if reply.Err==ErrTimeout{
+
 	}
 }
 
 func (ck *Clerk) Put(key string, value string) {
+	ck.CommentId+=1
 	ck.PutAppend(key, value, "Put")
 }
 func (ck *Clerk) Append(key string, value string) {
+	ck.CommentId+=1
 	ck.PutAppend(key, value, "Append")
 }
 
